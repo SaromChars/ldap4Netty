@@ -5,14 +5,18 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.handler.codec.MessageToByteEncoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 
@@ -29,6 +33,8 @@ public class LDAPServer {
     private static final Integer DEFAULT_PORT = 389;
 
     private List<ChannelHandler> handlers = null;
+    private Class decoderClass = null;
+    private Class encodeClass = null;
 
     private static EventLoopGroup bossGroup = null;
     private static EventLoopGroup workerGroup = null;
@@ -44,7 +50,19 @@ public class LDAPServer {
                     .childHandler(new ChannelInitializer<SocketChannel>() { // (4)
                         @Override
                         public void initChannel(SocketChannel ch) throws Exception {
-                            handlers.stream().forEach(handler -> ch.pipeline().addLast(handler));
+                            ChannelPipeline pipeline = ch.pipeline();
+
+                            if(encodeClass !=null){
+                                pipeline.addLast((MessageToByteEncoder)encodeClass.newInstance());
+                            }
+
+                            if(decoderClass !=null){
+                                pipeline.addLast((ByteToMessageDecoder)decoderClass.newInstance());
+                            }
+
+                            handlers.stream().forEach(channelHandler -> pipeline.addLast(channelHandler));
+
+
                         }
                     })
                     .option(ChannelOption.SO_BACKLOG, 128)          // (5)
@@ -81,13 +99,26 @@ public class LDAPServer {
     }
 
     public LDAPServer appendHandler(ChannelHandler handler) {
+        if (handlers == null) {
+            handlers = new ArrayList<>();
+        }
         handlers.add(handler);
         return this;
     }
 
+    public LDAPServer appendDecoder(Class decoderClazz){
+        this.decoderClass = decoderClazz;
+        return this;
+    }
+
+    public LDAPServer appendEncoder(Class encoderClazz) {
+        this.encodeClass = encoderClazz;
+        return this;
+    }
+
+
     public LDAPServer(Integer port) {
         this.port = Optional.ofNullable(port).orElse(DEFAULT_PORT);
         LOGGER.info("target port is {}, the server instance is creating...", port);
-        handlers = new ArrayList<>();
     }
 }
