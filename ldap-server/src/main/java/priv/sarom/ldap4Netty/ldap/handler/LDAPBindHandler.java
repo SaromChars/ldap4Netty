@@ -35,7 +35,7 @@ public class LDAPBindHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
 
-        Message message= (Message)msg;
+        Message message = (Message) msg;
         Request request = (Request) message;
 
         if (request.getType() != MessageTypeEnum.BIND_REQUEST) {

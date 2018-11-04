@@ -17,7 +17,7 @@ import org.apache.directory.api.ldap.model.message.extended.NoticeOfDisconnect;
  * @author: cxy, 2018/11/2
  */
 @Sharable
-public class LDAPDiscardHandler extends ChannelInboundHandlerAdapter {
+public class LDAPExceptionHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         Message message = (Message) msg;

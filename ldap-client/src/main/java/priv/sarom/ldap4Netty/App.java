@@ -7,7 +7,9 @@ import priv.sarom.ldap4Netty.demo.TimeClient;
  */
 public class App {
     public static void main(String[] args) throws InterruptedException {
-        TimeClient timeClient = new TimeClient();
-        timeClient.run("192.168.56.1", "37");
+/*        TimeClient timeClient = new TimeClient();
+        timeClient.run("192.168.56.1", "37");*/
+
+
     }
 }

@@ -42,7 +42,7 @@ public class LDAPDecoder extends ByteToMessageDecoder {
         InputStream bis = null;
         try {
             bos = new ByteArrayOutputStream();
-            while(byteBuf.isReadable()){
+            while (byteBuf.isReadable()) {
                 bos.write(new byte[]{byteBuf.readByte()});
             }
 
@@ -52,7 +52,7 @@ public class LDAPDecoder extends ByteToMessageDecoder {
             ldapDecoder.decode(bis, container);
             Message msg = container.getMessage().getDecorated();
 
-            if(msg ==null){
+            if (msg == null) {
                 return;
             }
             list.add(msg);
