@@ -15,6 +15,9 @@ import org.apache.directory.api.ldap.model.message.Request;
 import org.apache.directory.api.ldap.model.message.ResultCodeEnum;
 import org.apache.directory.api.ldap.model.message.ResultResponse;
 import org.apache.directory.api.ldap.model.message.ResultResponseRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import priv.sarom.ldap4Netty.ldap.codec.LDAPDecoder;
 import priv.sarom.ldap4Netty.ldap.entity.LDAPClient;
 
 import javax.swing.event.ChangeListener;
@@ -30,13 +33,14 @@ import java.util.List;
 @Sharable
 public class LDAPBindHandler extends ChannelInboundHandlerAdapter {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(LDAPBindHandler.class);
+
     DefaultLdapCodecService ldapCodecService = new DefaultLdapCodecService();
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
 
-        Message message = (Message) msg;
-        Request request = (Request) message;
+        Request request = (Request) msg;
 
         if (request.getType() != MessageTypeEnum.BIND_REQUEST) {
             //call the next handler
@@ -46,7 +50,8 @@ public class LDAPBindHandler extends ChannelInboundHandlerAdapter {
 
         //bind data , create the ldap session
         BindRequest bindRequest = (BindRequest) request;
-        LdapResult result = bindRequest.getResultResponse().getLdapResult();
+
+       LdapResult result = bindRequest.getResultResponse().getLdapResult();
 
         String ip = ctx.channel().remoteAddress().toString();
         String account = bindRequest.getName();
@@ -65,8 +70,7 @@ public class LDAPBindHandler extends ChannelInboundHandlerAdapter {
         result.setDiagnosticMessage("OK");
         result.setMatchedDn(bindRequest.getDn());
 
-        ctx.write(bindRequest.getResultResponse());
-
+        ctx.writeAndFlush(bindRequest.getResultResponse());
     }
 
     @Override

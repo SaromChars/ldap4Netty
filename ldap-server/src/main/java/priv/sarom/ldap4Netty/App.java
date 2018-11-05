@@ -20,18 +20,6 @@ public class App {
 
         LDAPServer ldapServer = new LDAPServer(null);
 
-       /* ExecutorService executorService = Executors.newCachedThreadPool(r -> {
-            Thread thread = new Thread(r);
-            return thread;
-        });
-        executorService.submit(() ->
-                ldapServer.appendHandler(new LDAPDecoder())
-                        .appendHandler(new LDAPBindHandler())
-//                        .appendHandler(new LDAPEncoder())
-                        .start()
-        );*/
-
-
         ldapServer.appendEncoder(LDAPEncoder.class)
                 .appendDecoder(LDAPDecoder.class)
                 .appendHandler(new LDAPBindHandler())

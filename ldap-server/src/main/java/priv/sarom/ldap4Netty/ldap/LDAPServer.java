@@ -61,8 +61,6 @@ public class LDAPServer {
                             }
 
                             handlers.stream().forEach(channelHandler -> pipeline.addLast(channelHandler));
-
-
                         }
                     })
                     .option(ChannelOption.SO_BACKLOG, 128)          // (5)
