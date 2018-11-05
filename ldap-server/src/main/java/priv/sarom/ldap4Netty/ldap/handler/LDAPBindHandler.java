@@ -1,28 +1,20 @@
 package priv.sarom.ldap4Netty.ldap.handler;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import org.apache.directory.api.ldap.codec.osgi.DefaultLdapCodecService;
 import org.apache.directory.api.ldap.model.message.BindRequest;
 import org.apache.directory.api.ldap.model.message.LdapResult;
-import org.apache.directory.api.ldap.model.message.Message;
 import org.apache.directory.api.ldap.model.message.MessageTypeEnum;
 import org.apache.directory.api.ldap.model.message.Request;
 import org.apache.directory.api.ldap.model.message.ResultCodeEnum;
-import org.apache.directory.api.ldap.model.message.ResultResponse;
-import org.apache.directory.api.ldap.model.message.ResultResponseRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import priv.sarom.ldap4Netty.ldap.codec.LDAPDecoder;
 import priv.sarom.ldap4Netty.ldap.entity.LDAPClient;
 
-import javax.swing.event.ChangeListener;
+import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
 
 /**
  * 说明:
@@ -40,6 +32,8 @@ public class LDAPBindHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
 
+        Thread.sleep(5000);
+
         Request request = (Request) msg;
 
         if (request.getType() != MessageTypeEnum.BIND_REQUEST) {
@@ -53,7 +47,7 @@ public class LDAPBindHandler extends ChannelInboundHandlerAdapter {
 
        LdapResult result = bindRequest.getResultResponse().getLdapResult();
 
-        String ip = ctx.channel().remoteAddress().toString();
+        String ip = ((InetSocketAddress)ctx.channel().remoteAddress()).getAddress().getHostAddress();
         String account = bindRequest.getName();
         String pwd = new String(bindRequest.getCredentials(), StandardCharsets.UTF_8);
 

@@ -3,7 +3,6 @@ package priv.sarom.ldap4Netty.ldap.handler;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.handler.codec.MessageToByteEncoder;
 import org.apache.directory.api.ldap.model.message.Message;
 import org.apache.directory.api.ldap.model.message.Request;
 import org.apache.directory.api.ldap.model.message.ResultCodeEnum;
