@@ -16,7 +16,7 @@ import priv.sarom.ldap4Netty.ldap.handler.LDAPModifyHandler;
 public class App {
     public static void main(String[] args) throws InstantiationException, IllegalAccessException {
 
-        Configurator.setRootLevel(Level.DEBUG);
+        Configurator.setRootLevel(Level.INFO);
 
         LDAPServer ldapServer = new LDAPServer(null);
 

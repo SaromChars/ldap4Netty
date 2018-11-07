@@ -1,5 +1,7 @@
 package priv.sarom.ldap4Netty.ldap.handler;
 
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -27,12 +29,10 @@ public class LDAPBindHandler extends ChannelInboundHandlerAdapter {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(LDAPBindHandler.class);
 
-    DefaultLdapCodecService ldapCodecService = new DefaultLdapCodecService();
-
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
 
-        Thread.sleep(5000);
+        LOGGER.info("enter the LDAPBindHandler.....");
 
         Request request = (Request) msg;
 
@@ -45,9 +45,9 @@ public class LDAPBindHandler extends ChannelInboundHandlerAdapter {
         //bind data , create the ldap session
         BindRequest bindRequest = (BindRequest) request;
 
-       LdapResult result = bindRequest.getResultResponse().getLdapResult();
+        LdapResult result = bindRequest.getResultResponse().getLdapResult();
 
-        String ip = ((InetSocketAddress)ctx.channel().remoteAddress()).getAddress().getHostAddress();
+        String ip = ((InetSocketAddress) ctx.channel().remoteAddress()).getAddress().getHostAddress();
         String account = bindRequest.getName();
         String pwd = new String(bindRequest.getCredentials(), StandardCharsets.UTF_8);
 
@@ -64,7 +64,7 @@ public class LDAPBindHandler extends ChannelInboundHandlerAdapter {
         result.setDiagnosticMessage("OK");
         result.setMatchedDn(bindRequest.getDn());
 
-        ctx.writeAndFlush(bindRequest.getResultResponse());
+        ctx.channel().writeAndFlush(bindRequest.getResultResponse());
     }
 
     @Override

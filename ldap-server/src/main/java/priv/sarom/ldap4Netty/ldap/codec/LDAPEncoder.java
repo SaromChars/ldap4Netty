@@ -23,9 +23,10 @@ public class LDAPEncoder extends MessageToByteEncoder{
 
     private static final Logger LOGGER = LoggerFactory.getLogger(LDAPEncoder.class);
 
-
     @Override
     protected void encode(ChannelHandlerContext channelHandlerContext, Object o, ByteBuf byteBuf) throws Exception {
+
+        LOGGER.info("enter the LDAPEncoder.....");
 
         Message responseMessage = (Message) o;
 

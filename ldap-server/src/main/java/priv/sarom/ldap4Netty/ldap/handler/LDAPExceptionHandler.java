@@ -1,5 +1,7 @@
 package priv.sarom.ldap4Netty.ldap.handler;
 
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -19,8 +21,7 @@ import org.apache.directory.api.ldap.model.message.extended.NoticeOfDisconnect;
 public class LDAPExceptionHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        Message message = (Message) msg;
-        Request request = (Request) message;
+        Request request = (Request) msg;
 
         //匹配错误的response
         ResultResponse respmsg = null;
@@ -32,8 +33,9 @@ public class LDAPExceptionHandler extends ChannelInboundHandlerAdapter {
 
         }
 
-        Message unavailable = (Message) NoticeOfDisconnect.UNAVAILABLE;
-        ctx.writeAndFlush(unavailable);
+        Message unavailable = NoticeOfDisconnect.UNAVAILABLE;
+        ChannelFuture channelFuture = ctx.channel().writeAndFlush(unavailable);
+        channelFuture.addListener(ChannelFutureListener.CLOSE);
     }
 
     @Override

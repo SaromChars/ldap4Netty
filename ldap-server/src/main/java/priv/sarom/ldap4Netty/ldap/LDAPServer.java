@@ -52,15 +52,15 @@ public class LDAPServer {
                         public void initChannel(SocketChannel ch) throws Exception {
                             ChannelPipeline pipeline = ch.pipeline();
 
-                            if(encodeClass !=null){
-                                pipeline.addLast((MessageToByteEncoder)encodeClass.newInstance());
-                            }
-
                             if(decoderClass !=null){
                                 pipeline.addLast((ByteToMessageDecoder)decoderClass.newInstance());
                             }
 
                             handlers.stream().forEach(channelHandler -> pipeline.addLast(channelHandler));
+
+                            if(encodeClass !=null){
+                                pipeline.addLast((MessageToByteEncoder)encodeClass.newInstance());
+                            }
                         }
                     })
                     .option(ChannelOption.SO_BACKLOG, 128)          // (5)
