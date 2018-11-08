@@ -11,6 +11,8 @@ import org.apache.directory.api.ldap.model.message.ResultCodeEnum;
 import org.apache.directory.api.ldap.model.message.ResultResponse;
 import org.apache.directory.api.ldap.model.message.ResultResponseRequest;
 import org.apache.directory.api.ldap.model.message.extended.NoticeOfDisconnect;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * 说明:
@@ -19,6 +21,9 @@ import org.apache.directory.api.ldap.model.message.extended.NoticeOfDisconnect;
  */
 @Sharable
 public class LDAPExceptionHandler extends ChannelInboundHandlerAdapter {
+
+    public static final Logger LOGGER = LoggerFactory.getLogger(LDAPExceptionHandler.class);
+
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         Request request = (Request) msg;
@@ -40,7 +45,7 @@ public class LDAPExceptionHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        cause.printStackTrace();
+        LOGGER.error(cause.getMessage(), cause);
         ctx.close();
     }
 }

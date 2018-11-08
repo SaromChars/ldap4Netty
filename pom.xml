@@ -11,6 +11,7 @@
   <modules>
     <module>ldap-server</module>
     <module>ldap-client</module>
+      <module>ldap-util</module>
   </modules>
 
   <name>ldap4Netty</name>

@@ -68,6 +68,7 @@ public class LDAPModifyHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        super.exceptionCaught(ctx, cause);
+        LOGGER.error(cause.getMessage(), cause);
+        ctx.close();
     }
 }

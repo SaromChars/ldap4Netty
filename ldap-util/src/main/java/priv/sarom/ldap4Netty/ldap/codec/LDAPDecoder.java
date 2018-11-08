@@ -3,11 +3,6 @@ package priv.sarom.ldap4Netty.ldap.codec;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
-import org.apache.directory.api.ldap.codec.api.LdapApiService;
-import org.apache.directory.api.ldap.codec.api.LdapDecoder;
-import org.apache.directory.api.ldap.codec.api.LdapMessageContainer;
-import org.apache.directory.api.ldap.codec.api.MessageDecorator;
-import org.apache.directory.api.ldap.codec.osgi.DefaultLdapCodecService;
 import org.apache.directory.api.ldap.model.message.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,11 +30,6 @@ public class LDAPDecoder extends ByteToMessageDecoder {
 
         LOGGER.info("start time:" + String.valueOf(System.nanoTime()));
 
-        LdapApiService ldapCodecService = new DefaultLdapCodecService();
-        LdapDecoder ldapDecoder = new LdapDecoder();
-
-        LdapMessageContainer container = new LdapMessageContainer<MessageDecorator<? extends Message>>(ldapCodecService);
-
         //the first reading, begin the data head
         int size = byteBuf.readableBytes();
 
@@ -63,8 +53,7 @@ public class LDAPDecoder extends ByteToMessageDecoder {
             }
             bis = new ByteArrayInputStream(byteBuffer);
 
-            ldapDecoder.decode(bis, container);
-            Message msg = container.getMessage().getDecorated();
+            Message msg = MyLDAPDecoder.decode2Message(bis);
 
             if (msg == null) {
                 return;

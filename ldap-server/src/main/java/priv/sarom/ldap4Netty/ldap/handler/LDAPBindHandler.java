@@ -1,11 +1,8 @@
 package priv.sarom.ldap4Netty.ldap.handler;
 
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import org.apache.directory.api.ldap.codec.osgi.DefaultLdapCodecService;
 import org.apache.directory.api.ldap.model.message.BindRequest;
 import org.apache.directory.api.ldap.model.message.LdapResult;
 import org.apache.directory.api.ldap.model.message.MessageTypeEnum;
@@ -13,7 +10,7 @@ import org.apache.directory.api.ldap.model.message.Request;
 import org.apache.directory.api.ldap.model.message.ResultCodeEnum;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import priv.sarom.ldap4Netty.ldap.entity.LDAPClient;
+import priv.sarom.ldap4Netty.ldap.entity.LDAPAccount;
 
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
@@ -52,7 +49,7 @@ public class LDAPBindHandler extends ChannelInboundHandlerAdapter {
         String pwd = new String(bindRequest.getCredentials(), StandardCharsets.UTF_8);
 
         //match the client
-        LDAPClient client = LDAPClient.builder()
+        LDAPAccount client = LDAPAccount.builder()
                 .account(account)
                 .password(pwd)
                 .ip(ip)

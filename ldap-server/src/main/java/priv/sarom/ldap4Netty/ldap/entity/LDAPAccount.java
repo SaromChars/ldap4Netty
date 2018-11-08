@@ -15,7 +15,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class LDAPClient {
+public class LDAPAccount {
 
     private Integer id;
 
