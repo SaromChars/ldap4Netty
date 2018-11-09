@@ -7,6 +7,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPromiseNotifier;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -41,8 +42,6 @@ public class LDAPClient {
 
     private static EventLoopGroup eventExecutors = null;
 
-    private Channel channel;
-
     public void start() throws InterruptedException {
 
         eventExecutors = new NioEventLoopGroup();
@@ -64,9 +63,9 @@ public class LDAPClient {
                         }
                     });
 
-            ChannelFuture connectFuture = bootstrap.connect(ip, port).sync();
+            Channel channel = bootstrap.connect(ip, port).sync().channel();
 
-            channel = connectFuture.channel();
+            channel.writeAndFlush(new Object());
 
             channel.closeFuture().sync();
         } finally {
@@ -102,14 +101,9 @@ public class LDAPClient {
         return this;
     }
 
-    public LDAPClient(Integer port) {
+    public LDAPClient(String ip, Integer port) {
+        this.ip = ip;
         this.port = Optional.ofNullable(port).orElse(DEFAULT_PORT);
         LOGGER.info("target port is {}, the server instance is creating...", port);
-    }
-
-    public void writeAndFlush(Message message) {
-
-        //TODO
-        channel.writeAndFlush(message).addListener(future -> future.);
     }
 }
