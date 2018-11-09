@@ -22,7 +22,7 @@ public class LDAPSession  {
     private X509Certificate remoteCert;
     private String remoteIP;
 
-    private LDAPAccount client;
+    private LDAPAccount account;
 
     private Boolean anonymous;
 }

@@ -30,7 +30,7 @@ public class App {
 
         List<Message> messages = new ArrayList<>();
 
-        String name = "cn=root";
+        String name = "cn=account";
         Dn rdns = new Dn(new Rdn(name));
 
         //build a BindRequest
@@ -39,7 +39,7 @@ public class App {
         bindRequest.setVersion3(true);
         bindRequest.setDn(rdns);
         bindRequest.setName(name);
-        bindRequest.setCredentials("123456");
+        bindRequest.setCredentials("pwd");
 
         messages.add(bindRequest);
 

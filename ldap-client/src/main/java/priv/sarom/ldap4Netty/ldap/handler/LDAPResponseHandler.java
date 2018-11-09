@@ -26,6 +26,8 @@ public class LDAPResponseHandler extends ChannelInboundHandlerAdapter {
         ResultResponse response = (ResultResponse) msg;
         int messageId = response.getMessageId();
         LOGGER.info("the recived message's id : {}", messageId);
+        LOGGER.info("the response is {}",response.getLdapResult().getResultCode().getMessage());
+        LOGGER.info(response.getLdapResult().getDiagnosticMessage());
 
         //makesure the response success
         if (response.getLdapResult().getResultCode().getResultCode() == ResultCodeEnum.SUCCESS.getResultCode()){

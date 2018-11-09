@@ -15,8 +15,10 @@ import org.apache.directory.api.ldap.model.message.ResultCodeEnum;
 import org.apache.directory.api.util.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import priv.sarom.ldap4Netty.ldap.entity.LDAPSession;
 
 import java.io.File;
+import java.util.Map;
 
 /**
  * @descriptions:
@@ -25,7 +27,10 @@ import java.io.File;
  */
 @Sharable
 public class LDAPModifyHandler extends ChannelInboundHandlerAdapter {
+
     public static final Logger LOGGER = LoggerFactory.getLogger(LDAPModifyHandler.class);
+
+    private Map<String, LDAPSession> ldapSessionMap;
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
@@ -33,15 +38,26 @@ public class LDAPModifyHandler extends ChannelInboundHandlerAdapter {
         LOGGER.info("enter the LDAPModifyHandler.......");
 
         Request request = (Request) msg;
+        ModifyRequest req = (ModifyRequest) request;
 
         if (request.getType() != MessageTypeEnum.MODIFY_REQUEST) {
             //call the next handler
             ctx.fireChannelRead(msg);
             return;
         }
-        ModifyRequest req = (ModifyRequest) request;
+
         LdapResult result = req.getResultResponse().getLdapResult();
         result.setMatchedDn(req.getName());
+
+        if (!ldapSessionMap.containsKey(req.getName().getName())) {
+            // then clien not bind ,
+            result.setResultCode(ResultCodeEnum.INVALID_CREDENTIALS);
+            result.setDiagnosticMessage(ResultCodeEnum.INVALID_CREDENTIALS.getMessage());
+
+            ctx.channel().writeAndFlush(req.getResultResponse());
+            return;
+        }
+
 
         LOGGER.info("------------------------------------ModifyId:" + req.getMessageId());
         LOGGER.info("------------------------------------Modification name:" + req.getName());
@@ -70,5 +86,12 @@ public class LDAPModifyHandler extends ChannelInboundHandlerAdapter {
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         LOGGER.error(cause.getMessage(), cause);
         ctx.close();
+    }
+
+    public LDAPModifyHandler(Map<String, LDAPSession> ldapSessionMap) throws Exception {
+        if(ldapSessionMap == null){
+            throw new Exception("the ldapSessionMap is not be null");
+        }
+        this.ldapSessionMap = ldapSessionMap;
     }
 }
