@@ -2,26 +2,24 @@ package priv.sarom.ldap4Netty.ldap;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromiseNotifier;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import org.apache.directory.api.ldap.model.message.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import priv.sarom.ldap4Netty.ldap.codec.LDAPDecoder;
+import priv.sarom.ldap4Netty.ldap.exception.LDAPException;
+import priv.sarom.ldap4Netty.ldap.initializer.OrdinaryInitializer;
+import priv.sarom.ldap4Netty.ldap.initializer.SSLInitializer;
 
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLEngine;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 
 /**
  * @descriptions:
@@ -38,9 +36,11 @@ public class LDAPClient {
 
     private List<ChannelHandler> handlers = null;
     private Class decoderClass = null;
-    private Class encodeClass = null;
+    private Class encoderClass = null;
 
     private static EventLoopGroup eventExecutors = null;
+
+    private ChannelInitializer initializer = null;
 
     public void start() throws InterruptedException {
 
@@ -50,18 +50,7 @@ public class LDAPClient {
             bootstrap.group(eventExecutors)
                     .channel(NioSocketChannel.class)
                     .option(ChannelOption.SO_KEEPALIVE, true)
-                    .handler(new ChannelInitializer<SocketChannel>() {
-                        @Override
-                        protected void initChannel(SocketChannel socketChannel) throws Exception {
-                            ChannelPipeline pipeline = socketChannel.pipeline();
-
-                            pipeline.addLast((ChannelHandler) encodeClass.newInstance())
-                                    .addLast((ChannelHandler) decoderClass.newInstance());
-
-                            handlers.stream().forEach(handler -> pipeline.addLast(handler));
-
-                        }
-                    });
+                    .handler(initializer);
 
             Channel channel = bootstrap.connect(ip, port).sync().channel();
 
@@ -97,7 +86,7 @@ public class LDAPClient {
     }
 
     public LDAPClient appendEncoder(Class encoderClazz) {
-        this.encodeClass = encoderClazz;
+        this.encoderClass = encoderClazz;
         return this;
     }
 
@@ -105,5 +94,19 @@ public class LDAPClient {
         this.ip = ip;
         this.port = Optional.ofNullable(port).orElse(DEFAULT_PORT);
         LOGGER.info("target port is {}, the server instance is creating...", port);
+    }
+
+    public LDAPClient init(SSLContext sslContext, Map<String,SSLEngine> sslEngineMap) throws LDAPException {
+        if (sslContext == null) {
+            initializer = new OrdinaryInitializer(decoderClass, encoderClass, handlers);
+        } else {
+            SSLInitializer sslInitializer = new SSLInitializer(decoderClass, encoderClass, handlers, sslContext, sslEngineMap);
+
+            sslInitializer.setClient(true);
+            sslInitializer.setVerifyClient(true);
+
+            initializer = sslInitializer;
+        }
+        return this;
     }
 }

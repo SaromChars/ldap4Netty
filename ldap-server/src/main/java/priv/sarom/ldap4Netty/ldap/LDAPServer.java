@@ -14,10 +14,16 @@ import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.MessageToByteEncoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import priv.sarom.ldap4Netty.ldap.exception.LDAPException;
+import priv.sarom.ldap4Netty.ldap.initializer.OrdinaryInitializer;
+import priv.sarom.ldap4Netty.ldap.initializer.SSLInitializer;
 
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLEngine;
 import java.util.ArrayList;
-import java.util.Iterator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -34,35 +40,28 @@ public class LDAPServer {
 
     private List<ChannelHandler> handlers = null;
     private Class decoderClass = null;
-    private Class encodeClass = null;
+    private Class encoderClass = null;
 
     private static EventLoopGroup bossGroup = null;
     private static EventLoopGroup workerGroup = null;
 
-    public Boolean start() {
+    private static ChannelInitializer initializer = null;
+
+    public Boolean start() throws LDAPException {
+
+        if (initializer == null) {
+            throw new LDAPException("must be init");
+        }
+
         bossGroup = new NioEventLoopGroup();
         workerGroup = new NioEventLoopGroup();
 
         try {
+
             ServerBootstrap b = new ServerBootstrap(); // (2)
             b.group(bossGroup, workerGroup)
                     .channel(NioServerSocketChannel.class) // (3)
-                    .childHandler(new ChannelInitializer<SocketChannel>() { // (4)
-                        @Override
-                        public void initChannel(SocketChannel ch) throws Exception {
-                            ChannelPipeline pipeline = ch.pipeline();
-
-                            if(decoderClass !=null){
-                                pipeline.addLast((ByteToMessageDecoder)decoderClass.newInstance());
-                            }
-
-                            handlers.stream().forEach(channelHandler -> pipeline.addLast(channelHandler));
-
-                            if(encodeClass !=null){
-                                pipeline.addLast((MessageToByteEncoder)encodeClass.newInstance());
-                            }
-                        }
-                    })
+                    .childHandler(initializer)
                     .option(ChannelOption.SO_BACKLOG, 128)          // (5)
                     .childOption(ChannelOption.SO_KEEPALIVE, true); // (6)
 
@@ -104,19 +103,32 @@ public class LDAPServer {
         return this;
     }
 
-    public LDAPServer appendDecoder(Class decoderClazz){
+    public LDAPServer appendDecoder(Class decoderClazz) {
         this.decoderClass = decoderClazz;
         return this;
     }
 
     public LDAPServer appendEncoder(Class encoderClazz) {
-        this.encodeClass = encoderClazz;
+        this.encoderClass = encoderClazz;
         return this;
     }
-
 
     public LDAPServer(Integer port) {
         this.port = Optional.ofNullable(port).orElse(DEFAULT_PORT);
         LOGGER.info("target port is {}, the server instance is creating...", port);
+    }
+
+    public LDAPServer init(SSLContext sslContext, Map<String,SSLEngine> sslEngineMap) throws LDAPException {
+        if (sslContext == null) {
+            initializer = new OrdinaryInitializer(decoderClass, encoderClass, handlers);
+        } else {
+            SSLInitializer sslInitializer = new SSLInitializer(decoderClass, encoderClass, handlers, sslContext, sslEngineMap);
+
+            sslInitializer.setClient(false);
+            sslInitializer.setVerifyClient(true);
+
+            initializer = sslInitializer;
+        }
+        return this;
     }
 }

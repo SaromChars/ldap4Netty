@@ -13,9 +13,10 @@ import org.slf4j.LoggerFactory;
 import priv.sarom.ldap4Netty.ldap.entity.LDAPAccount;
 import priv.sarom.ldap4Netty.ldap.entity.LDAPSession;
 
+import javax.net.ssl.SSLEngine;
+import javax.security.cert.X509Certificate;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -28,6 +29,7 @@ import java.util.Map;
 public class LDAPBindHandler extends ChannelInboundHandlerAdapter {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(LDAPBindHandler.class);
+    private final Map<String, SSLEngine> sslEngineMap;
 
     private Map<String, LDAPSession> ldapSessionMap;
 
@@ -35,6 +37,9 @@ public class LDAPBindHandler extends ChannelInboundHandlerAdapter {
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
 
         LOGGER.info("enter the LDAPBindHandler.....");
+
+        String channelId = ctx.channel().id().asLongText();
+        LOGGER.info(channelId);
 
         Request request = (Request) msg;
 
@@ -56,11 +61,20 @@ public class LDAPBindHandler extends ChannelInboundHandlerAdapter {
         String account = bindRequest.getName();
         String pwd = new String(bindRequest.getCredentials(), StandardCharsets.UTF_8);
 
+        //get the client cert form sslEngineMap
+        SSLEngine sslEngine = sslEngineMap.get(channelId);
+        byte[] clientCertData = null;
+        /*if (sslEngine != null) {
+            X509Certificate[] peerCertificateChain = sslEngine.getSession().getPeerCertificateChain();
+            clientCertData = peerCertificateChain[0].getEncoded();
+        }*/
+
         LDAPAccount client = LDAPAccount.builder()
                 .account(account)
                 .password(pwd)
                 .ip(ip)
                 .status((byte) 1)
+                .cert(clientCertData)
                 .build();
 
         //match the client, accessable,
@@ -88,10 +102,11 @@ public class LDAPBindHandler extends ChannelInboundHandlerAdapter {
         ctx.close();
     }
 
-    public LDAPBindHandler(Map<String, LDAPSession> ldapSessionMap) throws Exception {
-        if(ldapSessionMap == null){
+    public LDAPBindHandler(Map<String, LDAPSession> ldapSessionMap, Map<String, SSLEngine> sslEngineMap) throws Exception {
+        if (ldapSessionMap == null) {
             throw new Exception("the ldapSessionMap is not be null");
         }
         this.ldapSessionMap = ldapSessionMap;
+        this.sslEngineMap = sslEngineMap;
     }
 }
