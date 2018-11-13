@@ -34,8 +34,6 @@ public class App {
 
         SSLContext sslContext = SSLHelper.createSSLContext(new File("D:\\server\\apache-tomcat-8.0.35\\conf\\https\\keystore.jks"), "123456".toCharArray(),new File("D:\\server\\apache-tomcat-8.0.35\\conf\\https\\keystore.jks"), "123456".toCharArray());
 
-        System.setProperty("javax.net.debug","all");
-
         ldapServer.appendEncoder(LDAPEncoder.class)
                 .appendDecoder(LDAPDecoder.class)
                 .appendHandler(new LDAPBindHandler(sessionMap, sslEngineMap))

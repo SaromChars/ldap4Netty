@@ -49,7 +49,9 @@ public class LDAPModifyHandler extends ChannelInboundHandlerAdapter {
         LdapResult result = req.getResultResponse().getLdapResult();
         result.setMatchedDn(req.getName());
 
-        if (!ldapSessionMap.containsKey(req.getName().getName())) {
+        //error modify name     not bind name
+        String channelId = ctx.channel().id().asLongText();
+        if (!ldapSessionMap.containsKey(channelId)) {
             // then clien not bind ,
             result.setResultCode(ResultCodeEnum.INVALID_CREDENTIALS);
             result.setDiagnosticMessage(ResultCodeEnum.INVALID_CREDENTIALS.getMessage());

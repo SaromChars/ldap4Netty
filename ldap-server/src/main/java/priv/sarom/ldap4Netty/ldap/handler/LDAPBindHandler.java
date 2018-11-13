@@ -64,10 +64,10 @@ public class LDAPBindHandler extends ChannelInboundHandlerAdapter {
         //get the client cert form sslEngineMap
         SSLEngine sslEngine = sslEngineMap.get(channelId);
         byte[] clientCertData = null;
-        /*if (sslEngine != null) {
+        if (sslEngine != null) {
             X509Certificate[] peerCertificateChain = sslEngine.getSession().getPeerCertificateChain();
             clientCertData = peerCertificateChain[0].getEncoded();
-        }*/
+        }
 
         LDAPAccount client = LDAPAccount.builder()
                 .account(account)
@@ -86,7 +86,7 @@ public class LDAPBindHandler extends ChannelInboundHandlerAdapter {
         ldapSession.setAccount(client);
         ldapSession.setRemoteIP(client.getIp());
 
-        ldapSessionMap.put(bindRequest.getName(), ldapSession);
+        ldapSessionMap.put(channelId, ldapSession);
 
         //another business logical process
         result.setResultCode(ResultCodeEnum.SUCCESS);
