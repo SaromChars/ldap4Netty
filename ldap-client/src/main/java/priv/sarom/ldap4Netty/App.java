@@ -40,7 +40,7 @@ public class App {
 
         List<Message> messages = new ArrayList<>();
 
-        String name = "cn=account";
+        String name = "cn=accout";
         Dn rdns = new Dn(new Rdn(name));
 
         //build a BindRequest
@@ -49,7 +49,7 @@ public class App {
         bindRequest.setVersion3(true);
         bindRequest.setDn(rdns);
         bindRequest.setName(name);
-        bindRequest.setCredentials("pwd");
+        bindRequest.setCredentials("123456");
 
         messages.add(bindRequest);
 
@@ -58,13 +58,13 @@ public class App {
         modifyRequest.setMessageId(3);
         modifyRequest.setName(rdns);
 
-        DefaultAttribute attribute = new DefaultAttribute("u;binary", "testdemo".getBytes());
+        DefaultAttribute attribute = new DefaultAttribute("userCertificate;binary", "testdemo".getBytes());
         modifyRequest.add(attribute);
 
         messages.add(modifyRequest);
 
 
-        LDAPClient client = new LDAPClient("localhost", 389);
+        LDAPClient client = new LDAPClient("192.168.20.150", 6389);
 
         SSLContext sslContext = SSLHelper.createSSLContext(new File(App.class.getResource("/client.jks").getFile()), "123456".toCharArray(), new File(App.class.getResource("/client.jks").getFile()), "123456".toCharArray());
 
