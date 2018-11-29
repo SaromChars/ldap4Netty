@@ -47,9 +47,10 @@ public class LDAPBindHandler extends ChannelInboundHandlerAdapter {
 
             //need to control the session validation
 
+            throw new Exception("......");
             //call the next handler
-            ctx.fireChannelRead(msg);
-            return;
+ /*           ctx.fireChannelRead(msg);
+            return;*/
         }
 
         //bind data , create the ldap session
@@ -98,7 +99,8 @@ public class LDAPBindHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        cause.printStackTrace();
+        LOGGER.info("catch the error...................");
+//        cause.printStackTrace();
         ctx.close();
     }
 

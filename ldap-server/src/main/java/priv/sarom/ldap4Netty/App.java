@@ -25,7 +25,7 @@ public class App {
 
         Configurator.setRootLevel(Level.DEBUG);
 
-        LDAPServer ldapServer = new LDAPServer(null);
+        LDAPServer ldapServer = new LDAPServer(6666);
 
         HashMap<String, LDAPSession> sessionMap = new HashMap<>(100);
         HashMap<String, SSLEngine> sslEngineMap = new HashMap<>(100);

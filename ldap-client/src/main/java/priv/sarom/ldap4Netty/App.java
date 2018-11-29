@@ -64,7 +64,7 @@ public class App {
         messages.add(modifyRequest);
 
 
-        LDAPClient client = new LDAPClient("192.168.20.150", 6389);
+        LDAPClient client = new LDAPClient("localhost", 6666);
 
         SSLContext sslContext = SSLHelper.createSSLContext(new File(App.class.getResource("/client.jks").getFile()), "123456".toCharArray(), new File(App.class.getResource("/client.jks").getFile()), "123456".toCharArray());
 

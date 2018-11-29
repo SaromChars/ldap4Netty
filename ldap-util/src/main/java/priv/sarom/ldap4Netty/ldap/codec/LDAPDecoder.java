@@ -1,6 +1,7 @@
 package priv.sarom.ldap4Netty.ldap.codec;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import org.apache.directory.api.ldap.model.message.Message;
@@ -22,8 +23,6 @@ public class LDAPDecoder extends ByteToMessageDecoder {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(LDAPDecoder.class);
 
-    //the cache data about recived
-    private static byte[] byteBuffer;
 
     @Override
     protected void decode(ChannelHandlerContext channelHandlerContext, ByteBuf byteBuf, List<Object> list) throws Exception {
@@ -33,25 +32,15 @@ public class LDAPDecoder extends ByteToMessageDecoder {
         //the first reading, begin the data head
         int size = byteBuf.readableBytes();
 
-        ByteArrayOutputStream bos = null;
         InputStream bis = null;
         try {
-            bos = new ByteArrayOutputStream();
-            while (byteBuf.isReadable()) {
-                bos.write(new byte[]{byteBuf.readByte()});
-            }
+            byte[] bytes = byteBuf.hasArray()
+                    ? byteBuf.array() :
+                    Unpooled.buffer(size).writeBytes(byteBuf).array();
+            bis = new ByteArrayInputStream(bytes);
 
             LOGGER.info("read data: {} bytes", size);
 
-            byte[] bytes = bos.toByteArray();
-            if (byteBuffer != null) {
-                int originLen = byteBuffer.length;
-                byteBuffer = Arrays.copyOf(byteBuffer, originLen + bytes.length);//数组扩容
-                System.arraycopy(bytes, 0, byteBuffer, originLen, bytes.length);
-            } else {
-                byteBuffer = Arrays.copyOf(bytes, bytes.length);
-            }
-            bis = new ByteArrayInputStream(byteBuffer);
 
             Message msg = MyLDAPDecoder.decode2Message(bis);
 
@@ -60,17 +49,13 @@ public class LDAPDecoder extends ByteToMessageDecoder {
             }
             list.add(msg);
 
-            //decode success, release the cache
-            byteBuffer = null;
-
             LOGGER.info("unpack success");
         } catch (Exception e) {
-            LOGGER.error(e.getMessage(),e);
+            LOGGER.error(e.getMessage(), e);
             LOGGER.info("continue to read data more..");
             return;
         } finally {
             bis.close();
-            bos.close();
         }
     }
 

@@ -73,7 +73,7 @@ public class LDAPModifyHandler extends ChannelInboundHandlerAdapter {
             LOGGER.info("---------------------------------- attributeType :" + attribute.getAttributeType());
 
             byte[] bytes = attribute.getBytes();
-            File file = new File("C:\\Users\\cnh\\Desktop\\" + req.getMessageId() + ".cer");
+            File file = new File("C:\\Users\\cxy\\Desktop\\" + req.getMessageId() + ".cer");
             FileUtils.writeByteArrayToFile(file, bytes);
         }
 
