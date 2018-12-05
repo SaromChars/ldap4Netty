@@ -12,15 +12,12 @@ import org.apache.directory.api.ldap.model.name.Rdn;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.core.config.Configurator;
 import priv.sarom.ldap4Netty.ldap.LDAPClient;
-import priv.sarom.ldap4Netty.ldap.SSLHelper;
 import priv.sarom.ldap4Netty.ldap.codec.LDAPDecoder;
 import priv.sarom.ldap4Netty.ldap.codec.LDAPEncoder;
 import priv.sarom.ldap4Netty.ldap.exception.LDAPException;
 import priv.sarom.ldap4Netty.ldap.handler.LDAPRequestHandler;
 import priv.sarom.ldap4Netty.ldap.handler.LDAPResponseHandler;
 
-import javax.net.ssl.SSLContext;
-import java.io.File;
 import java.io.IOException;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
@@ -30,14 +27,12 @@ import java.security.cert.CertificateException;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Hello world!
- */
 public class App {
     public static void main(String[] args) throws InterruptedException, LdapInvalidDnException, CertificateException, UnrecoverableKeyException, NoSuchAlgorithmException, IOException, KeyManagementException, KeyStoreException, LDAPException {
 
-        Configurator.setRootLevel(Level.INFO);
+        Configurator.setRootLevel(Level.DEBUG);
 
+        // 待发送的消息列表
         List<Message> messages = new ArrayList<>();
 
         String name = "cn=accout";
@@ -66,15 +61,11 @@ public class App {
 
         LDAPClient client = new LDAPClient("localhost", 6666);
 
-        SSLContext sslContext = SSLHelper.createSSLContext(new File(App.class.getResource("/client.jks").getFile()), "123456".toCharArray(), new File(App.class.getResource("/client.jks").getFile()), "123456".toCharArray());
-
         client.appendEncoder(LDAPEncoder.class)
                 .appendDecoder(LDAPDecoder.class)
                 .appendHandler(new LDAPResponseHandler())
                 .appendHandler(new LDAPRequestHandler(messages))
-                .init(sslContext, null)
+                .init(null, null)
                 .start();
-
-
     }
 }
