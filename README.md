@@ -140,7 +140,7 @@
         ```
         然后根据提示输入相应的证书信息，最后按`Y`确认证书信息
         
-        ![create_jks](https://user-images.githubusercontent.com/18196773/49554371-e0363800-f936-11e8-8f5b-52596b8955a0.gif)
+        ![create_jks](https://user-images.githubusercontent.com/18196773/49555362-8d5e7f80-f93a-11e8-8c64-d817a00b9612.gif)
         
     2. 导出公钥证书，命令如下：
         ```
