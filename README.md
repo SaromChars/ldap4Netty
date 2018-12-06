@@ -139,6 +139,9 @@
         -alias 密钥（也算证书，自签）或证书别名，便于操作
         ```
         然后根据提示输入相应的证书信息，最后按`Y`确认证书信息
+        
+        ![create_jks](https://user-images.githubusercontent.com/18196773/49554371-e0363800-f936-11e8-8f5b-52596b8955a0.gif)
+        
     2. 导出公钥证书，命令如下：
         ```
         keytool -keystore jks文件的路径 
