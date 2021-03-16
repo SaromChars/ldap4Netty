@@ -2,6 +2,7 @@ package priv.sarom.ldap4Netty.ldap;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
@@ -38,28 +39,25 @@ public class LDAPClient {
     private Class decoderClass = null;
     private Class encoderClass = null;
 
-    private static EventLoopGroup eventExecutors = null;
+    private EventLoopGroup eventExecutors = null;
 
     private ChannelInitializer initializer = null;
 
     public void start() throws InterruptedException {
 
         eventExecutors = new NioEventLoopGroup();
-        try {
-            Bootstrap bootstrap = new Bootstrap();
-            bootstrap.group(eventExecutors)
-                    .channel(NioSocketChannel.class)
-                    .option(ChannelOption.SO_KEEPALIVE, true)
-                    .handler(initializer);
+        Bootstrap bootstrap = new Bootstrap();
+        bootstrap.group(eventExecutors)
+                .channel(NioSocketChannel.class)
+                .option(ChannelOption.SO_KEEPALIVE, true)
+                .handler(initializer);
 
-            Channel channel = bootstrap.connect(ip, port).sync().channel();
-
-            channel.writeAndFlush(new Object());
-
-            channel.closeFuture().sync();
-        } finally {
-            eventExecutors.shutdownGracefully();
-        }
+        Channel channel = bootstrap.connect(ip, port).sync().channel();
+        ChannelFuture channelFuture = channel.closeFuture();
+        channelFuture.addListener(future -> {
+            this.stop();
+            System.out.println("close");
+        });
 
     }
 
@@ -96,7 +94,7 @@ public class LDAPClient {
         LOGGER.info("target port is {}, the server instance is creating...", port);
     }
 
-    public LDAPClient init(SSLContext sslContext, Map<String,SSLEngine> sslEngineMap) throws LDAPException {
+    public LDAPClient init(SSLContext sslContext, Map<String, SSLEngine> sslEngineMap) throws LDAPException {
         if (sslContext == null) {
             initializer = new OrdinaryInitializer(decoderClass, encoderClass, handlers);
         } else {

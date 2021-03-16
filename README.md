@@ -64,8 +64,8 @@
     import priv.sarom.ldap4Netty.ldap.codec.LDAPDecoder;
     import priv.sarom.ldap4Netty.ldap.codec.LDAPEncoder;
     import priv.sarom.ldap4Netty.ldap.exception.LDAPException;
-    import priv.sarom.ldap4Netty.ldap.handler.LDAPRequestHandler;
-    import priv.sarom.ldap4Netty.ldap.handler.LDAPResponseHandler;
+    import priv.sarom.ldap4Netty.ldap.handler.LDAPOperationHandler;
+    import priv.sarom.ldap4Netty.ldap.handler.LDAPOperationHandler;
     
     import java.io.IOException;
     import java.security.KeyManagementException;

@@ -36,22 +36,19 @@ public class LDAPBindHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
 
-        LOGGER.info("enter the LDAPBindHandler.....");
-
         String channelId = ctx.channel().id().asLongText();
-        LOGGER.info(channelId);
-
+        LOGGER.info("---------------------------channelId:"+channelId);
         Request request = (Request) msg;
-
         if (request.getType() != MessageTypeEnum.BIND_REQUEST) {
 
             //need to control the session validation
 
-            throw new Exception("......");
             //call the next handler
- /*           ctx.fireChannelRead(msg);
-            return;*/
+            ctx.fireChannelRead(msg);
+            return;
         }
+
+        LOGGER.info("enter the LDAPBindHandler.....");
 
         //bind data , create the ldap session
         BindRequest bindRequest = (BindRequest) request;
@@ -63,12 +60,15 @@ public class LDAPBindHandler extends ChannelInboundHandlerAdapter {
         String pwd = new String(bindRequest.getCredentials(), StandardCharsets.UTF_8);
 
         //get the client cert form sslEngineMap
-        SSLEngine sslEngine = sslEngineMap.get(channelId);
         byte[] clientCertData = null;
-        if (sslEngine != null) {
-            X509Certificate[] peerCertificateChain = sslEngine.getSession().getPeerCertificateChain();
-            clientCertData = peerCertificateChain[0].getEncoded();
+        if(sslEngineMap != null){
+            SSLEngine sslEngine = sslEngineMap.get(channelId);
+            if (sslEngine != null) {
+                X509Certificate[] peerCertificateChain = sslEngine.getSession().getPeerCertificateChain();
+                clientCertData = peerCertificateChain[0].getEncoded();
+            }
         }
+
 
         LDAPAccount client = LDAPAccount.builder()
                 .account(account)
@@ -80,7 +80,6 @@ public class LDAPBindHandler extends ChannelInboundHandlerAdapter {
 
         //match the client, accessable,
         //else return failure
-
 
         //put into the session
         LDAPSession ldapSession = new LDAPSession();
@@ -100,7 +99,7 @@ public class LDAPBindHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         LOGGER.info("catch the error...................");
-//        cause.printStackTrace();
+        cause.printStackTrace();
         ctx.close();
     }
 

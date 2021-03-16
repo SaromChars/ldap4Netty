@@ -18,6 +18,7 @@ import org.slf4j.LoggerFactory;
 import priv.sarom.ldap4Netty.ldap.entity.LDAPSession;
 
 import java.io.File;
+import java.time.LocalDateTime;
 import java.util.Map;
 
 /**
@@ -71,10 +72,11 @@ public class LDAPModifyHandler extends ChannelInboundHandlerAdapter {
             LOGGER.info("---------------------------------- id :" + attribute.getId());
             LOGGER.info("---------------------------------- upId :" + attribute.getUpId());
             LOGGER.info("---------------------------------- attributeType :" + attribute.getAttributeType());
+            LOGGER.info(LocalDateTime.now().toString());
 
-            byte[] bytes = attribute.getBytes();
-            File file = new File("C:\\Users\\cxy\\Desktop\\" + req.getMessageId() + ".cer");
-            FileUtils.writeByteArrayToFile(file, bytes);
+//            byte[] bytes = attribute.getBytes();
+//            File file = new File("C:\\Users\\cxy\\Desktop\\" + req.getMessageId() + ".cer");
+//            FileUtils.writeByteArrayToFile(file, bytes);
         }
 
         result.setResultCode(ResultCodeEnum.SUCCESS);

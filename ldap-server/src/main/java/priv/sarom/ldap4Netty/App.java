@@ -1,7 +1,8 @@
 package priv.sarom.ldap4Netty;
 
+
 import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.core.config.Configurator;
+import org.apache.logging.log4j.core.config.LoggerConfig;
 import priv.sarom.ldap4Netty.ldap.LDAPServer;
 import priv.sarom.ldap4Netty.ldap.codec.LDAPDecoder;
 import priv.sarom.ldap4Netty.ldap.codec.LDAPEncoder;
@@ -16,7 +17,8 @@ import java.util.HashMap;
 public class App {
     public static void main(String[] args) throws Exception {
 
-        Configurator.setRootLevel(Level.DEBUG);
+        LoggerConfig loggerConfig = new LoggerConfig();
+        loggerConfig.setLevel(Level.INFO);
 
         LDAPServer ldapServer = new LDAPServer(6666);
         HashMap<String, LDAPSession> sessionMap = new HashMap<>(100);

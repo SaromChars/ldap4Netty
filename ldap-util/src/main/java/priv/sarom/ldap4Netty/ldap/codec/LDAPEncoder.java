@@ -24,10 +24,21 @@ public class LDAPEncoder extends MessageToByteEncoder{
         LOGGER.info("enter the LDAPEncoder.....");
 
         Message responseMessage = (Message) o;
-
         byte[] array = MyLDAPEncoder.encode2Byte(responseMessage);
-
         byteBuf.writeBytes(array);
+
+        /**
+         * test multi pack
+         */
+       /* List<Message> responseMessage = (List<Message>) o;
+        Message message = responseMessage.get(0);
+        byte[] array = MyLDAPEncoder.encode2Byte(message);
+        byteBuf.writeBytes(array);
+
+        message = responseMessage.get(1);
+        array = MyLDAPEncoder.encode2Byte(message);
+        byteBuf.writeBytes(array);*/
+
 
         LOGGER.info(String.valueOf(System.nanoTime()));
 

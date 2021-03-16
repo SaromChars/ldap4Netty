@@ -9,14 +9,11 @@ import org.apache.directory.api.ldap.model.message.ModifyRequest;
 import org.apache.directory.api.ldap.model.message.ModifyRequestImpl;
 import org.apache.directory.api.ldap.model.name.Dn;
 import org.apache.directory.api.ldap.model.name.Rdn;
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.core.config.Configurator;
 import priv.sarom.ldap4Netty.ldap.LDAPClient;
 import priv.sarom.ldap4Netty.ldap.codec.LDAPDecoder;
 import priv.sarom.ldap4Netty.ldap.codec.LDAPEncoder;
 import priv.sarom.ldap4Netty.ldap.exception.LDAPException;
-import priv.sarom.ldap4Netty.ldap.handler.LDAPRequestHandler;
-import priv.sarom.ldap4Netty.ldap.handler.LDAPResponseHandler;
+import priv.sarom.ldap4Netty.ldap.handler.LDAPOperationHandler;
 
 import java.io.IOException;
 import java.security.KeyManagementException;
@@ -30,11 +27,6 @@ import java.util.List;
 public class App {
     public static void main(String[] args) throws InterruptedException, LdapInvalidDnException, CertificateException, UnrecoverableKeyException, NoSuchAlgorithmException, IOException, KeyManagementException, KeyStoreException, LDAPException {
 
-        Configurator.setRootLevel(Level.DEBUG);
-
-        // 待发送的消息列表
-        List<Message> messages = new ArrayList<>();
-
         String name = "cn=accout";
         Dn rdns = new Dn(new Rdn(name));
 
@@ -46,8 +38,6 @@ public class App {
         bindRequest.setName(name);
         bindRequest.setCredentials("123456");
 
-        messages.add(bindRequest);
-
         //bind a ModifyRequest
         ModifyRequest modifyRequest = new ModifyRequestImpl();
         modifyRequest.setMessageId(3);
@@ -56,16 +46,22 @@ public class App {
         DefaultAttribute attribute = new DefaultAttribute("userCertificate;binary", "testdemo".getBytes());
         modifyRequest.add(attribute);
 
-        messages.add(modifyRequest);
+        int count = 50;
+        while (count-- > 0) {
+            List<Message> messages = new ArrayList<>();
+            messages.add(bindRequest);
+            messages.add(modifyRequest);
+
+            LDAPClient client = new LDAPClient("localhost", 6666);
+            client.appendEncoder(LDAPEncoder.class)
+                    .appendDecoder(LDAPDecoder.class)
+                    .appendHandler(new LDAPOperationHandler(messages))
+                    .init(null, null)
+                    .start();
+        }
+
+        Thread.currentThread().join(10_000);
 
 
-        LDAPClient client = new LDAPClient("localhost", 6666);
-
-        client.appendEncoder(LDAPEncoder.class)
-                .appendDecoder(LDAPDecoder.class)
-                .appendHandler(new LDAPResponseHandler())
-                .appendHandler(new LDAPRequestHandler(messages))
-                .init(null, null)
-                .start();
     }
 }
