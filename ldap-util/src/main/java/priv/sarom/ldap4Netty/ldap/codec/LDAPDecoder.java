@@ -32,7 +32,7 @@ public class LDAPDecoder extends ByteToMessageDecoder {
         // enter LDAPModifyHandler 50
         log.info("start time:" + System.nanoTime());
 
-        // 可能出现半包
+        // 可能出现半包，合并数据
         ByteBuf mergeByteBuf = null;
         if (remainData != null && remainData.length > 0) {
             ByteBuf remain = Unpooled.copiedBuffer(remainData);
@@ -40,10 +40,22 @@ public class LDAPDecoder extends ByteToMessageDecoder {
         } else {
             mergeByteBuf = byteBuf;
         }
-        ByteBuf byteBuf1 = Unpooled.buffer(mergeByteBuf.readableBytes()).writeBytes(byteBuf);
-        byte[] mergeData = mergeByteBuf.hasArray() ? mergeByteBuf.array()
-                : byteBuf1.array();
-        ReferenceCountUtil.release(byteBuf1);
+        byteBuf.retain();
+
+        //读取为byte数组
+        byte[] mergeData = null;
+        if (mergeByteBuf.hasArray()) {
+            mergeData = mergeByteBuf.array();
+        } else {
+            //heapByteBuf 可以返回数组
+            ByteBuf tempHeapByteBuf = Unpooled.buffer(mergeByteBuf.readableBytes()).writeBytes(mergeByteBuf);
+            if (!tempHeapByteBuf.hasArray()) {
+                throw new RuntimeException("cannot convert to byte array");
+            }
+            mergeData = tempHeapByteBuf.array();
+            ReferenceCountUtil.release(tempHeapByteBuf);
+        }
+        ReferenceCountUtil.release(mergeByteBuf);
 
         Message msg = null;
         int processedLength = 0;
@@ -53,7 +65,7 @@ public class LDAPDecoder extends ByteToMessageDecoder {
                 if (msg != null) {
                     processedLength = matchLength;
                     list.add(msg);
-                    log.info("unpack success");
+                    log.info("unpack success " + msg.getType().name());
                 }
             } catch (DecoderException e) {
                 if (e.getMessage().contains("ERR_01200_BAD_TRANSITION_FROM_STATE")) {

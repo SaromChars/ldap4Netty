@@ -38,7 +38,15 @@ public class LDAPOperationHandler extends ChannelInboundHandlerAdapter {
         }
 
         ctx.writeAndFlush(message);
+        System.out.println("send init");
         messages.remove(0);
+
+        //粘包测试
+/*        while (messages.size() > 0) {
+            ctx.write(messages.get(0));
+            messages.remove(0);
+            ctx.flush();
+        }*/
     }
 
     @Override
@@ -59,15 +67,16 @@ public class LDAPOperationHandler extends ChannelInboundHandlerAdapter {
             return;
         }
 
-        //continue to send
-        if (messages.size() == 0) {
-            System.out.println("send final");
-            ctx.close();
-            return;
-        }
+        //continue to send modify operation
+        while (true) {
+            if (messages.size() == 0) {
+                System.out.println("send final");
+                return;
+            }
 
-        ctx.channel().writeAndFlush(messages.get(0));
-        messages.remove(0);
+            ctx.channel().writeAndFlush(messages.get(0));
+            messages.remove(0);
+        }
     }
 
     @Override

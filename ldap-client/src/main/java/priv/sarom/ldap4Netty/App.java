@@ -46,13 +46,22 @@ public class App {
         DefaultAttribute attribute = new DefaultAttribute("userCertificate;binary", "testdemo".getBytes());
         modifyRequest.add(attribute);
 
-        int count = 50;
+        int count = 1;
         while (count-- > 0) {
             List<Message> messages = new ArrayList<>();
             messages.add(bindRequest);
             messages.add(modifyRequest);
+            messages.add(modifyRequest);
+            messages.add(modifyRequest);
+            messages.add(modifyRequest);
+            messages.add(modifyRequest);
+            messages.add(modifyRequest);
+            messages.add(modifyRequest);
+            messages.add(modifyRequest);
+            messages.add(modifyRequest);
+            messages.add(modifyRequest);
 
-            LDAPClient client = new LDAPClient("localhost", 6666);
+            LDAPClient client = new LDAPClient("localhost", 389);
             client.appendEncoder(LDAPEncoder.class)
                     .appendDecoder(LDAPDecoder.class)
                     .appendHandler(new LDAPOperationHandler(messages))
@@ -60,7 +69,7 @@ public class App {
                     .start();
         }
 
-        Thread.currentThread().join(10_000);
+        Thread.currentThread().join(30_000);
 
 
     }

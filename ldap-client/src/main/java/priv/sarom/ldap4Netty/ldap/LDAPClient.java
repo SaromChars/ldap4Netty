@@ -52,12 +52,11 @@ public class LDAPClient {
                 .option(ChannelOption.SO_KEEPALIVE, true)
                 .handler(initializer);
 
+        System.out.println("want send");
         Channel channel = bootstrap.connect(ip, port).sync().channel();
-        ChannelFuture channelFuture = channel.closeFuture();
-        channelFuture.addListener(future -> {
-            this.stop();
-            System.out.println("close");
-        });
+        ChannelFuture channelFuture = channel.closeFuture().sync();
+
+        this.stop();
 
     }
 

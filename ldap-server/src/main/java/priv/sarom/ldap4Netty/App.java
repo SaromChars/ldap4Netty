@@ -20,7 +20,7 @@ public class App {
         LoggerConfig loggerConfig = new LoggerConfig();
         loggerConfig.setLevel(Level.INFO);
 
-        LDAPServer ldapServer = new LDAPServer(6666);
+        LDAPServer ldapServer = new LDAPServer(389);
         HashMap<String, LDAPSession> sessionMap = new HashMap<>(100);
 
         ldapServer.appendEncoder(LDAPEncoder.class)
