@@ -39,6 +39,7 @@ public class LDAPExceptionHandler extends ChannelInboundHandlerAdapter {
         }
 
         Message unavailable = NoticeOfDisconnect.UNAVAILABLE;
+        unavailable.setMessageId(request.getMessageId());
         ChannelFuture channelFuture = ctx.channel().writeAndFlush(unavailable);
         channelFuture.addListener(ChannelFutureListener.CLOSE);
     }

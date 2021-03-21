@@ -8,6 +8,7 @@ import org.apache.directory.api.ldap.model.message.LdapResult;
 import org.apache.directory.api.ldap.model.message.MessageTypeEnum;
 import org.apache.directory.api.ldap.model.message.Request;
 import org.apache.directory.api.ldap.model.message.ResultCodeEnum;
+import org.apache.directory.api.ldap.model.message.ResultResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import priv.sarom.ldap4Netty.ldap.entity.LDAPAccount;
@@ -52,7 +53,6 @@ public class LDAPBindHandler extends ChannelInboundHandlerAdapter {
 
         //bind data , create the ldap session
         BindRequest bindRequest = (BindRequest) request;
-        LdapResult result = bindRequest.getResultResponse().getLdapResult();
 
         //get the information about client from this connnection
         String ip = ((InetSocketAddress) ctx.channel().remoteAddress()).getAddress().getHostAddress();
@@ -89,11 +89,13 @@ public class LDAPBindHandler extends ChannelInboundHandlerAdapter {
         ldapSessionMap.put(channelId, ldapSession);
 
         //another business logical process
+        ResultResponse resultResponse = bindRequest.getResultResponse();
+        resultResponse.setMessageId(request.getMessageId());
+        LdapResult result = resultResponse.getLdapResult();
         result.setResultCode(ResultCodeEnum.SUCCESS);
-        result.setDiagnosticMessage("OK");
         result.setMatchedDn(bindRequest.getDn());
 
-        ctx.channel().writeAndFlush(bindRequest.getResultResponse());
+        ctx.channel().writeAndFlush(resultResponse);
     }
 
     @Override

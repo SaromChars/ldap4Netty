@@ -12,6 +12,7 @@ import org.apache.directory.api.ldap.model.message.MessageTypeEnum;
 import org.apache.directory.api.ldap.model.message.ModifyRequest;
 import org.apache.directory.api.ldap.model.message.Request;
 import org.apache.directory.api.ldap.model.message.ResultCodeEnum;
+import org.apache.directory.api.ldap.model.message.ResultResponse;
 import org.apache.directory.api.util.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,7 +40,6 @@ public class LDAPModifyHandler extends ChannelInboundHandlerAdapter {
         LOGGER.info("enter the LDAPModifyHandler.......");
 
         Request request = (Request) msg;
-        ModifyRequest req = (ModifyRequest) request;
 
         if (request.getType() != MessageTypeEnum.MODIFY_REQUEST) {
             //call the next handler
@@ -47,7 +47,10 @@ public class LDAPModifyHandler extends ChannelInboundHandlerAdapter {
             return;
         }
 
-        LdapResult result = req.getResultResponse().getLdapResult();
+        ModifyRequest req = (ModifyRequest) request;
+        ResultResponse resultResponse = req.getResultResponse();
+        resultResponse.setMessageId(req.getMessageId());
+        LdapResult result = resultResponse.getLdapResult();
         result.setMatchedDn(req.getName());
 
         //error modify name     not bind name
@@ -57,7 +60,7 @@ public class LDAPModifyHandler extends ChannelInboundHandlerAdapter {
             result.setResultCode(ResultCodeEnum.INVALID_CREDENTIALS);
             result.setDiagnosticMessage(ResultCodeEnum.INVALID_CREDENTIALS.getMessage());
 
-            ctx.channel().writeAndFlush(req.getResultResponse());
+            ctx.channel().writeAndFlush(resultResponse);
             return;
         }
 
@@ -80,9 +83,8 @@ public class LDAPModifyHandler extends ChannelInboundHandlerAdapter {
         }
 
         result.setResultCode(ResultCodeEnum.SUCCESS);
-        result.setDiagnosticMessage("OK");
 
-        ctx.channel().writeAndFlush(req.getResultResponse());
+        ctx.channel().writeAndFlush(resultResponse);
 
     }
 

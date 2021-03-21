@@ -11,6 +11,7 @@ import priv.sarom.ldap4Netty.ldap.handler.LDAPAbandonHandler;
 import priv.sarom.ldap4Netty.ldap.handler.LDAPBindHandler;
 import priv.sarom.ldap4Netty.ldap.handler.LDAPExceptionHandler;
 import priv.sarom.ldap4Netty.ldap.handler.LDAPModifyHandler;
+import priv.sarom.ldap4Netty.ldap.handler.LDAPSearchHandler;
 
 import java.util.HashMap;
 
@@ -28,6 +29,7 @@ public class App {
                 .appendHandler(new LDAPBindHandler(sessionMap, null))
                 .appendHandler(new LDAPAbandonHandler())
                 .appendHandler(new LDAPModifyHandler(sessionMap))
+                .appendHandler(new LDAPSearchHandler(sessionMap))
                 .appendHandler(new LDAPExceptionHandler())
 
                 //非ssl模式下sslContext和sslEngineMap非必需 ， nullable
