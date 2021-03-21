@@ -118,7 +118,6 @@ public class LDAPServer {
             initializer = new OrdinaryInitializer(decoderClass, encoderClass, handlers);
         } else {
             SSLInitializer sslInitializer = new SSLInitializer(decoderClass, encoderClass, handlers, sslContext, sslEngineMap);
-
             sslInitializer.setClient(false);
             sslInitializer.setVerifyClient(true);
 

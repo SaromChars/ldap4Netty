@@ -2,7 +2,9 @@ package priv.sarom.ldap4Netty.ldap;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.X509TrustManager;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -13,6 +15,7 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 
 /**
  * 说明:
@@ -55,6 +58,7 @@ public class SSLHelper {
         }
 
         TrustManagerFactory tmf = null;
+        TrustManager[] trustManagers = new TrustManager[1];
         if (trustedStoreFile != null && trustedStoreFile.exists() && trustedPass != null) {
             try (InputStream tis = new FileInputStream(trustedStoreFile)) {
                 KeyStore tks = KeyStore.getInstance(KeyStore.getDefaultType());
@@ -62,9 +66,27 @@ public class SSLHelper {
                 tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
                 tmf.init(tks);
             }
+        } else {
+            X509TrustManager x509TrustManager = new X509TrustManager() {
+                @Override
+                public void checkClientTrusted(X509Certificate[] x509Certificates, String s) throws CertificateException {
+
+                }
+
+                @Override
+                public void checkServerTrusted(X509Certificate[] x509Certificates, String s) throws CertificateException {
+
+                }
+
+                @Override
+                public X509Certificate[] getAcceptedIssuers() {
+                    return new X509Certificate[0];
+                }
+            };
+            trustManagers[0] = x509TrustManager;
         }
 
-        sslContext.init(kmf == null ? null : kmf.getKeyManagers(), tmf == null ? null : tmf.getTrustManagers(), null);
+        sslContext.init(kmf == null ? null : kmf.getKeyManagers(), tmf == null ? trustManagers : tmf.getTrustManagers(), null);
 
         return sslContext;
     }

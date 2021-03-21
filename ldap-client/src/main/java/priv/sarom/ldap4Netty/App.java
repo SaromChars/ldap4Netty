@@ -10,11 +10,14 @@ import org.apache.directory.api.ldap.model.message.ModifyRequestImpl;
 import org.apache.directory.api.ldap.model.name.Dn;
 import org.apache.directory.api.ldap.model.name.Rdn;
 import priv.sarom.ldap4Netty.ldap.LDAPClient;
+import priv.sarom.ldap4Netty.ldap.SSLHelper;
 import priv.sarom.ldap4Netty.ldap.codec.LDAPDecoder;
 import priv.sarom.ldap4Netty.ldap.codec.LDAPEncoder;
 import priv.sarom.ldap4Netty.ldap.exception.LDAPException;
 import priv.sarom.ldap4Netty.ldap.handler.LDAPOperationHandler;
 
+import javax.net.ssl.SSLContext;
+import java.io.File;
 import java.io.IOException;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
@@ -61,11 +64,12 @@ public class App {
             messages.add(modifyRequest);
             messages.add(modifyRequest);
 
-            LDAPClient client = new LDAPClient("localhost", 389);
+            LDAPClient client = new LDAPClient("localhost", 6389);
+            SSLContext sslContext = SSLHelper.createSSLContext(new File(App.class.getResource("/client.jks").getPath()), "123456".toCharArray());
             client.appendEncoder(LDAPEncoder.class)
                     .appendDecoder(LDAPDecoder.class)
                     .appendHandler(new LDAPOperationHandler(messages))
-                    .init(null, null)
+                    .init(sslContext, null)
                     .start();
         }
 

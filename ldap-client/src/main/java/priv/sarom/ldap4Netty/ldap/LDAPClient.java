@@ -100,6 +100,7 @@ public class LDAPClient {
             SSLInitializer sslInitializer = new SSLInitializer(decoderClass, encoderClass, handlers, sslContext, sslEngineMap);
 
             sslInitializer.setClient(true);
+            sslInitializer.setVerifyClient(true);
             initializer = sslInitializer;
         }
         return this;
