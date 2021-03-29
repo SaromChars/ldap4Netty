@@ -3,14 +3,13 @@ package priv.sarom.ldap4Netty.ldap.handler;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.directory.api.ldap.model.message.BindRequest;
 import org.apache.directory.api.ldap.model.message.LdapResult;
 import org.apache.directory.api.ldap.model.message.MessageTypeEnum;
 import org.apache.directory.api.ldap.model.message.Request;
 import org.apache.directory.api.ldap.model.message.ResultCodeEnum;
 import org.apache.directory.api.ldap.model.message.ResultResponse;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import priv.sarom.ldap4Netty.ldap.entity.LDAPAccount;
 import priv.sarom.ldap4Netty.ldap.entity.LDAPSession;
 
@@ -19,6 +18,7 @@ import javax.security.cert.X509Certificate;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * 说明:
@@ -27,18 +27,18 @@ import java.util.Map;
  */
 
 @Sharable
+@Slf4j
 public class LDAPBindHandler extends ChannelInboundHandlerAdapter {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(LDAPBindHandler.class);
     private final Map<String, SSLEngine> sslEngineMap;
-
     private Map<String, LDAPSession> ldapSessionMap;
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
 
         String channelId = ctx.channel().id().asLongText();
-        LOGGER.info("---------------------------channelId:"+channelId);
+        log.info("---------------------------channelId:" + channelId);
+        log.info("---------------------------thread:" + Thread.currentThread().getName());
         Request request = (Request) msg;
         if (request.getType() != MessageTypeEnum.BIND_REQUEST) {
 
@@ -49,7 +49,7 @@ public class LDAPBindHandler extends ChannelInboundHandlerAdapter {
             return;
         }
 
-        LOGGER.info("enter the LDAPBindHandler.....");
+        log.info("enter the LDAPBindHandler.....");
 
         //bind data , create the ldap session
         BindRequest bindRequest = (BindRequest) request;
@@ -61,14 +61,13 @@ public class LDAPBindHandler extends ChannelInboundHandlerAdapter {
 
         //get the client cert form sslEngineMap
         byte[] clientCertData = null;
-        if(sslEngineMap != null){
+        if (sslEngineMap != null) {
             SSLEngine sslEngine = sslEngineMap.get(channelId);
             if (sslEngine != null) {
                 X509Certificate[] peerCertificateChain = sslEngine.getSession().getPeerCertificateChain();
                 clientCertData = peerCertificateChain[0].getEncoded();
             }
         }
-
 
         LDAPAccount client = LDAPAccount.builder()
                 .account(account)
@@ -95,12 +94,15 @@ public class LDAPBindHandler extends ChannelInboundHandlerAdapter {
         result.setResultCode(ResultCodeEnum.SUCCESS);
         result.setMatchedDn(bindRequest.getDn());
 
-        ctx.channel().writeAndFlush(resultResponse);
+        CompletableFuture.runAsync(() ->
+                ctx.channel().writeAndFlush(resultResponse)
+        );
+
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        LOGGER.info("catch the error...................");
+        log.error("catch the error...................");
         cause.printStackTrace();
         ctx.close();
     }

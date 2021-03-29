@@ -4,9 +4,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.directory.api.ldap.model.message.Message;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * 说明:
@@ -14,14 +13,14 @@ import org.slf4j.LoggerFactory;
  * @author: cxy, 2018/11/2
  */
 @Sharable
-public class LDAPEncoder extends MessageToByteEncoder{
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(LDAPEncoder.class);
+@Slf4j
+public class LDAPEncoder extends MessageToByteEncoder {
 
     @Override
     protected void encode(ChannelHandlerContext channelHandlerContext, Object o, ByteBuf byteBuf) throws Exception {
 
-        LOGGER.info("enter the LDAPEncoder.....");
+        log.info("enter the LDAPEncoder.....");
+        log.info("---------------------------thread:" + Thread.currentThread().getName());
 
         Message responseMessage = (Message) o;
         byte[] array = MyLDAPEncoder.encode2Byte(responseMessage);
@@ -40,7 +39,7 @@ public class LDAPEncoder extends MessageToByteEncoder{
         byteBuf.writeBytes(array);*/
 
 
-        LOGGER.info(String.valueOf(System.nanoTime()));
+        log.info(String.valueOf(System.nanoTime()));
 
     }
 

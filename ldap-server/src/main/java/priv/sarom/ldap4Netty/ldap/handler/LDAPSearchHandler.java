@@ -3,6 +3,7 @@ package priv.sarom.ldap4Netty.ldap.handler;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.directory.api.ldap.model.entry.DefaultAttribute;
 import org.apache.directory.api.ldap.model.message.LdapResult;
 import org.apache.directory.api.ldap.model.message.MessageTypeEnum;
@@ -13,8 +14,6 @@ import org.apache.directory.api.ldap.model.message.SearchResultDoneImpl;
 import org.apache.directory.api.ldap.model.message.SearchResultEntryImpl;
 import org.apache.directory.api.ldap.model.name.Dn;
 import org.apache.directory.api.ldap.model.name.Rdn;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import priv.sarom.ldap4Netty.ldap.entity.LDAPSession;
 
 import java.util.Map;
@@ -25,16 +24,16 @@ import java.util.Map;
  * @author: SaromChars
  */
 @Sharable
+@Slf4j
 public class LDAPSearchHandler extends ChannelInboundHandlerAdapter {
-
-    public static final Logger LOGGER = LoggerFactory.getLogger(LDAPSearchHandler.class);
 
     private Map<String, LDAPSession> ldapSessionMap;
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
 
-        LOGGER.info("enter the LDAPSearchHandler.......");
+        log.info("enter the LDAPSearchHandler.......");
+        log.info("---------------------------thread:" + Thread.currentThread().getName());
 
         Request request = (Request) msg;
         SearchRequest req = (SearchRequest) request;
@@ -45,10 +44,10 @@ public class LDAPSearchHandler extends ChannelInboundHandlerAdapter {
             return;
         }
 
-        LOGGER.info("------------------------------------MessageId:" + req.getMessageId());
-        LOGGER.info("------------------------------------Base:" + req.getBase());
-        LOGGER.info("------------------------------------Filter:" + req.getFilter().toString());
-        LOGGER.info("------------------------------------Scope:" + req.getScope().name());
+        log.info("------------------------------------MessageId:" + req.getMessageId());
+        log.info("------------------------------------Base:" + req.getBase());
+        log.info("------------------------------------Filter:" + req.getFilter().toString());
+        log.info("------------------------------------Scope:" + req.getScope().name());
 
         SearchResultEntryImpl resultEntry = new SearchResultEntryImpl();
         //返回用户相关数据
@@ -78,7 +77,7 @@ public class LDAPSearchHandler extends ChannelInboundHandlerAdapter {
                 //component
                 .add(new DefaultAttribute("namingContexts", "dc=test"));
         resultEntry.setMessageId(req.getMessageId());
-        ctx.channel().writeAndFlush(resultEntry);
+        writeWithProtected(ctx, resultEntry);
 
         SearchResultDoneImpl resultResponse = (SearchResultDoneImpl) req.getResultResponse();
         LdapResult result = resultResponse.getLdapResult();
@@ -86,13 +85,21 @@ public class LDAPSearchHandler extends ChannelInboundHandlerAdapter {
         resultResponse.setMessageId(req.getMessageId());
         result.setResultCode(ResultCodeEnum.SUCCESS);
 
-        ctx.channel().writeAndFlush(resultResponse);
+        writeWithProtected(ctx, resultResponse);
 
+    }
+
+    private void writeWithProtected(ChannelHandlerContext ctx, Object obj) {
+        if (ctx.channel().isActive() && ctx.channel().isWritable()) {
+            ctx.channel().writeAndFlush(obj);
+        } else {
+            log.error("the buffer is full");
+        }
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        LOGGER.error(cause.getMessage(), cause);
+        log.error(cause.getMessage(), cause);
         ctx.close();
     }
 

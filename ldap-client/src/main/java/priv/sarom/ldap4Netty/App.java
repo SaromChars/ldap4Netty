@@ -49,7 +49,7 @@ public class App {
         DefaultAttribute attribute = new DefaultAttribute("userCertificate;binary", "testdemo".getBytes());
         modifyRequest.add(attribute);
 
-        int count = 1;
+        int count = 50;
         while (count-- > 0) {
             List<Message> messages = new ArrayList<>();
             messages.add(bindRequest);

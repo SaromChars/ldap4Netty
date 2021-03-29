@@ -1,10 +1,9 @@
 package priv.sarom.ldap4Netty.ldap.handler;
 
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.directory.api.ldap.model.entry.Attribute;
 import org.apache.directory.api.ldap.model.entry.Modification;
 import org.apache.directory.api.ldap.model.message.LdapResult;
@@ -13,12 +12,8 @@ import org.apache.directory.api.ldap.model.message.ModifyRequest;
 import org.apache.directory.api.ldap.model.message.Request;
 import org.apache.directory.api.ldap.model.message.ResultCodeEnum;
 import org.apache.directory.api.ldap.model.message.ResultResponse;
-import org.apache.directory.api.util.FileUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import priv.sarom.ldap4Netty.ldap.entity.LDAPSession;
 
-import java.io.File;
 import java.time.LocalDateTime;
 import java.util.Map;
 
@@ -28,16 +23,16 @@ import java.util.Map;
  * @author: SaromChars
  */
 @Sharable
+@Slf4j
 public class LDAPModifyHandler extends ChannelInboundHandlerAdapter {
-
-    public static final Logger LOGGER = LoggerFactory.getLogger(LDAPModifyHandler.class);
 
     private Map<String, LDAPSession> ldapSessionMap;
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
 
-        LOGGER.info("enter the LDAPModifyHandler.......");
+        log.info("enter the LDAPModifyHandler.......");
+        log.info("---------------------------thread:" + Thread.currentThread().getName());
 
         Request request = (Request) msg;
 
@@ -65,37 +60,38 @@ public class LDAPModifyHandler extends ChannelInboundHandlerAdapter {
         }
 
 
-        LOGGER.info("------------------------------------ModifyId:" + req.getMessageId());
-        LOGGER.info("------------------------------------Modification name:" + req.getName());
+        log.info("------------------------------------ModifyId:" + req.getMessageId());
+        log.info("------------------------------------Modification name:" + req.getName());
 
         //business logic
         //add new sth.
         for (Modification modification : req.getModifications()) {
             Attribute attribute = modification.getAttribute();
-            LOGGER.info("---------------------------------- id :" + attribute.getId());
-            LOGGER.info("---------------------------------- upId :" + attribute.getUpId());
-            LOGGER.info("---------------------------------- attributeType :" + attribute.getAttributeType());
-            LOGGER.info(LocalDateTime.now().toString());
+            log.info("---------------------------------- id :" + attribute.getId());
+            log.info("---------------------------------- upId :" + attribute.getUpId());
+            log.info("---------------------------------- attributeType :" + attribute.getAttributeType());
+            log.info(LocalDateTime.now().toString());
 
-//            byte[] bytes = attribute.getBytes();
-//            File file = new File("C:\\Users\\cxy\\Desktop\\" + req.getMessageId() + ".cer");
-//            FileUtils.writeByteArrayToFile(file, bytes);
         }
 
         result.setResultCode(ResultCodeEnum.SUCCESS);
 
-        ctx.channel().writeAndFlush(resultResponse);
+        if (ctx.channel().isActive() && ctx.channel().isWritable()) {
+            ctx.channel().writeAndFlush(resultResponse);
+        } else {
+            log.error("the buffer is full");
+        }
 
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        LOGGER.error(cause.getMessage(), cause);
+        log.error(cause.getMessage(), cause);
         ctx.close();
     }
 
     public LDAPModifyHandler(Map<String, LDAPSession> ldapSessionMap) throws Exception {
-        if(ldapSessionMap == null){
+        if (ldapSessionMap == null) {
             throw new Exception("the ldapSessionMap is not be null");
         }
         this.ldapSessionMap = ldapSessionMap;

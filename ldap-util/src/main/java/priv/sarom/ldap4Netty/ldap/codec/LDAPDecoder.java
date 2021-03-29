@@ -7,6 +7,8 @@ import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.util.ReferenceCountUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.directory.api.asn1.DecoderException;
+import org.apache.directory.api.asn1.ber.tlv.IntegerDecoder;
+import org.apache.directory.api.asn1.ber.tlv.UniversalTag;
 import org.apache.directory.api.ldap.model.message.Message;
 
 import java.io.ByteArrayInputStream;
@@ -31,6 +33,7 @@ public class LDAPDecoder extends ByteToMessageDecoder {
         // enter LDAPBindHandler 50
         // enter LDAPModifyHandler 50
         log.info("start time:" + System.nanoTime());
+        log.info("---------------------------thread:" + Thread.currentThread().getName());
 
         // 可能出现半包，合并数据
         ByteBuf mergeByteBuf = null;
@@ -60,6 +63,24 @@ public class LDAPDecoder extends ByteToMessageDecoder {
         Message msg = null;
         int processedLength = 0;
         for (int matchLength = 1; matchLength <= mergeData.length; matchLength++) {
+            if (mergeData[processedLength] != UniversalTag.SEQUENCE.getValue()) {
+                //skip head data without matching sequence tag
+                continue;
+            }
+            // read length octets
+            byte lengthOct = mergeData[processedLength + 1];
+            int len = 0;
+            if ((lengthOct & 0x80) == 0) {
+                //short
+                len = lengthOct;
+            } else {
+                //long number, but ldap not big actually
+                for (int lenByteCount = 0; lenByteCount < lengthOct; lenByteCount++) {
+                    int move = lengthOct - lenByteCount - 1;
+                    len |= (mergeData[processedLength + 2 + lenByteCount] << move);
+                }
+            }
+            matchLength += (lengthOct + len);
             try {
                 msg = MyLDAPDecoder.decode2Message(new ByteArrayInputStream(mergeData, processedLength, matchLength - processedLength));
                 if (msg != null) {
