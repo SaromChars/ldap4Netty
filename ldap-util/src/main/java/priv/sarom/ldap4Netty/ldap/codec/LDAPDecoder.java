@@ -7,7 +7,6 @@ import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.util.ReferenceCountUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.directory.api.asn1.DecoderException;
-import org.apache.directory.api.asn1.ber.tlv.IntegerDecoder;
 import org.apache.directory.api.asn1.ber.tlv.UniversalTag;
 import org.apache.directory.api.ldap.model.message.Message;
 
@@ -73,14 +72,25 @@ public class LDAPDecoder extends ByteToMessageDecoder {
             if ((lengthOct & 0x80) == 0) {
                 //short
                 len = lengthOct;
+                // 1 byte describes the size of construct
+                matchLength += (1 + len);
             } else {
                 //long number, but ldap not big actually
-                for (int lenByteCount = 0; lenByteCount < lengthOct; lenByteCount++) {
-                    int move = lengthOct - lenByteCount - 1;
-                    len |= (mergeData[processedLength + 2 + lenByteCount] << move);
+                int lengthOctLen = lengthOct & 0x7f;
+                for (int readLenByteCount = 1; readLenByteCount <= lengthOctLen; readLenByteCount++) {
+                    int move = (lengthOctLen - readLenByteCount) * Byte.SIZE;
+                    len |= (mergeData[processedLength + 1 + readLenByteCount] << move);
                 }
+                // 1 byte describes the size of length value
+                // lengthOctLen describes the size of construct
+                matchLength += (1 + lengthOctLen + len);
             }
-            matchLength += (lengthOct + len);
+
+            if (matchLength > mergeData.length) {
+                // data is unavailable
+                break;
+            }
+
             try {
                 msg = MyLDAPDecoder.decode2Message(new ByteArrayInputStream(mergeData, processedLength, matchLength - processedLength));
                 if (msg != null) {

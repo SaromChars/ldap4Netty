@@ -46,7 +46,7 @@ public class App {
         modifyRequest.setMessageId(3);
         modifyRequest.setName(rdns);
 
-        DefaultAttribute attribute = new DefaultAttribute("userCertificate;binary", "testdemo".getBytes());
+        DefaultAttribute attribute = new DefaultAttribute("userCertificate;binary", new byte[1024*8]);
         modifyRequest.add(attribute);
 
         int count = 50;
