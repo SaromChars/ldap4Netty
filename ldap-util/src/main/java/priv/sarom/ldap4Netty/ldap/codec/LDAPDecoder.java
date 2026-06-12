@@ -1,10 +1,8 @@
 package priv.sarom.ldap4Netty.ldap.codec;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
-import io.netty.util.ReferenceCountUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.directory.api.asn1.DecoderException;
 import org.apache.directory.api.asn1.ber.tlv.UniversalTag;
@@ -26,103 +24,84 @@ public class LDAPDecoder extends ByteToMessageDecoder {
     @Override
     protected void decode(ChannelHandlerContext channelHandlerContext, ByteBuf byteBuf, List<Object> list) throws Exception {
 
-        //通过比较LDAPDecoder start time 的次数 和 Modify Operation 的次数判断是否粘包（单次截断tcp流过长）
-        // loop 50
-        // start time 36
-        // enter LDAPBindHandler 50
-        // enter LDAPModifyHandler 50
-        log.info("start time:" + System.nanoTime());
-        log.info("---------------------------thread:" + Thread.currentThread().getName());
+        int readable = byteBuf.readableBytes();
+        if (readable == 0) {
+            return;
+        }
 
-        // 可能出现半包，合并数据
-        ByteBuf mergeByteBuf = null;
+        byte[] incoming = new byte[readable];
+        byteBuf.readBytes(incoming);
+
+        byte[] mergeData;
         if (remainData != null && remainData.length > 0) {
-            ByteBuf remain = Unpooled.copiedBuffer(remainData);
-            mergeByteBuf = Unpooled.compositeBuffer().addComponent(remain).addComponent(byteBuf);
+            mergeData = new byte[remainData.length + incoming.length];
+            System.arraycopy(remainData, 0, mergeData, 0, remainData.length);
+            System.arraycopy(incoming, 0, mergeData, remainData.length, incoming.length);
+            remainData = null;
         } else {
-            mergeByteBuf = byteBuf;
+            mergeData = incoming;
         }
-        byteBuf.retain();
 
-        //读取为byte数组
-        byte[] mergeData = null;
-        if (mergeByteBuf.hasArray()) {
-            mergeData = mergeByteBuf.array();
-        } else {
-            //heapByteBuf 可以返回数组
-            ByteBuf tempHeapByteBuf = Unpooled.buffer(mergeByteBuf.readableBytes()).writeBytes(mergeByteBuf);
-            if (!tempHeapByteBuf.hasArray()) {
-                throw new RuntimeException("cannot convert to byte array");
-            }
-            mergeData = tempHeapByteBuf.array();
-            ReferenceCountUtil.release(tempHeapByteBuf);
-        }
-        ReferenceCountUtil.release(mergeByteBuf);
-
-        Message msg = null;
         int processedLength = 0;
-        for (int matchLength = 1; matchLength <= mergeData.length; matchLength++) {
+        while (processedLength < mergeData.length) {
             if (mergeData[processedLength] != UniversalTag.SEQUENCE.getValue()) {
-                //skip head data without matching sequence tag
+                processedLength++;
                 continue;
             }
-            // read length octets
-            byte lengthOct = mergeData[processedLength + 1];
-            int len = 0;
-            if ((lengthOct & 0x80) == 0) {
-                //short
-                len = lengthOct;
-                // 1 byte describes the size of construct
-                matchLength += (1 + len);
-            } else {
-                //long number, but ldap not big actually
-                int lengthOctLen = lengthOct & 0x7f;
-                for (int readLenByteCount = 1; readLenByteCount <= lengthOctLen; readLenByteCount++) {
-                    int move = (lengthOctLen - readLenByteCount) * Byte.SIZE;
-                    len |= (mergeData[processedLength + 1 + readLenByteCount] << move);
-                }
-                // 1 byte describes the size of length value
-                // lengthOctLen describes the size of construct
-                matchLength += (1 + lengthOctLen + len);
+
+            if (processedLength + 1 >= mergeData.length) {
+                break;
             }
 
-            if (matchLength > mergeData.length) {
-                // data is unavailable
+            byte lengthOct = mergeData[processedLength + 1];
+            int len = 0;
+            int headerLen;
+            if ((lengthOct & 0x80) == 0) {
+                len = lengthOct;
+                headerLen = 2;
+            } else {
+                int lengthOctLen = lengthOct & 0x7f;
+                if (processedLength + 1 + lengthOctLen >= mergeData.length) {
+                    break;
+                }
+                for (int i = 1; i <= lengthOctLen; i++) {
+                    int shift = (lengthOctLen - i) * Byte.SIZE;
+                    len |= ((mergeData[processedLength + 1 + i] & 0xFF) << shift);
+                }
+                headerLen = 2 + lengthOctLen;
+            }
+
+            int totalLen = headerLen + len;
+            if (processedLength + totalLen > mergeData.length) {
                 break;
             }
 
             try {
-                msg = MyLDAPDecoder.decode2Message(new ByteArrayInputStream(mergeData, processedLength, matchLength - processedLength));
+                Message msg = MyLDAPDecoder.decode2Message(
+                        new ByteArrayInputStream(mergeData, processedLength, totalLen));
                 if (msg != null) {
-                    processedLength = matchLength;
                     list.add(msg);
-                    log.info("unpack success " + msg.getType().name());
+                    log.debug("decoded {}", msg.getType().name());
                 }
+                processedLength += totalLen;
             } catch (DecoderException e) {
-                if (e.getMessage().contains("ERR_01200_BAD_TRANSITION_FROM_STATE")) {
-                    //丢弃脏数据
-                    processedLength = matchLength;
-                } else if (e.getMessage().contains("ERR_05205_PDU_DOES_NOT_CONTAIN_ENOUGH_DATA")) {
-                    //数据不足以解析，等待后续数据
-                    continue;
-                }
-                continue;
+                log.warn("failed to decode complete LDAP frame, closing channel", e);
+                remainData = null;
+                channelHandlerContext.close();
+                return;
             }
         }
 
-        // 可能存在半包
-        int newlen = mergeData.length - processedLength;
-        if (newlen > 0) {
-            remainData = new byte[newlen];
-            System.arraycopy(mergeData, processedLength, remainData, 0, newlen);
-        } else {
-            remainData = null;
+        int remaining = mergeData.length - processedLength;
+        if (remaining > 0) {
+            remainData = new byte[remaining];
+            System.arraycopy(mergeData, processedLength, remainData, 0, remaining);
         }
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        cause.printStackTrace();
+        log.error("LDAPDecoder error", cause);
         ctx.close();
     }
 }

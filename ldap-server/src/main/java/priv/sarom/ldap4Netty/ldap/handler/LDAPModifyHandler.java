@@ -27,6 +27,7 @@ import java.util.Map;
 public class LDAPModifyHandler extends ChannelInboundHandlerAdapter {
 
     private Map<String, LDAPSession> ldapSessionMap;
+    private final boolean readOnly;
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
@@ -55,6 +56,13 @@ public class LDAPModifyHandler extends ChannelInboundHandlerAdapter {
             result.setResultCode(ResultCodeEnum.INVALID_CREDENTIALS);
             result.setDiagnosticMessage(ResultCodeEnum.INVALID_CREDENTIALS.getMessage());
 
+            ctx.channel().writeAndFlush(resultResponse);
+            return;
+        }
+
+        if (readOnly) {
+            result.setResultCode(ResultCodeEnum.UNWILLING_TO_PERFORM);
+            result.setDiagnosticMessage("directory is read-only");
             ctx.channel().writeAndFlush(resultResponse);
             return;
         }
@@ -91,9 +99,14 @@ public class LDAPModifyHandler extends ChannelInboundHandlerAdapter {
     }
 
     public LDAPModifyHandler(Map<String, LDAPSession> ldapSessionMap) throws Exception {
+        this(ldapSessionMap, false);
+    }
+
+    public LDAPModifyHandler(Map<String, LDAPSession> ldapSessionMap, boolean readOnly) throws Exception {
         if (ldapSessionMap == null) {
             throw new Exception("the ldapSessionMap is not be null");
         }
         this.ldapSessionMap = ldapSessionMap;
+        this.readOnly = readOnly;
     }
 }

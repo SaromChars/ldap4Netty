@@ -17,8 +17,8 @@ import java.util.List;
  */
 public class OrdinaryInitializer extends ChannelInitializer<SocketChannel> {
 
-    private Class decoderClass = null;
-    private Class encoderClass = null;
+    private Class<? extends ByteToMessageDecoder> decoderClass = null;
+    private Class<? extends MessageToByteEncoder> encoderClass = null;
     private List<ChannelHandler> handlers = null;
 
     @Override
@@ -26,17 +26,21 @@ public class OrdinaryInitializer extends ChannelInitializer<SocketChannel> {
         ChannelPipeline pipeline = socketChannel.pipeline();
 
         if (encoderClass != null) {
-            pipeline.addLast((MessageToByteEncoder) encoderClass.newInstance());
+            pipeline.addLast(encoderClass.newInstance());
         }
 
         if (decoderClass != null) {
-            pipeline.addLast((ByteToMessageDecoder) decoderClass.newInstance());
+            pipeline.addLast(decoderClass.newInstance());
         }
 
-        handlers.stream().forEach(channelHandler -> pipeline.addLast(channelHandler));
+        for (ChannelHandler handler : handlers) {
+            pipeline.addLast(handler);
+        }
     }
 
-    public OrdinaryInitializer(Class decoderClass, Class encoderClass, List<ChannelHandler> handlers) throws LDAPException {
+    public OrdinaryInitializer(Class<? extends ByteToMessageDecoder> decoderClass,
+                              Class<? extends MessageToByteEncoder> encoderClass,
+                              List<ChannelHandler> handlers) throws LDAPException {
 
         if (decoderClass == null) {
             throw new LDAPException("decoderClass should not be null..");

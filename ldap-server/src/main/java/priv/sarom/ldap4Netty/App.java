@@ -13,11 +13,12 @@ import priv.sarom.ldap4Netty.ldap.handler.LDAPBindHandler;
 import priv.sarom.ldap4Netty.ldap.handler.LDAPExceptionHandler;
 import priv.sarom.ldap4Netty.ldap.handler.LDAPModifyHandler;
 import priv.sarom.ldap4Netty.ldap.handler.LDAPSearchHandler;
+import priv.sarom.ldap4Netty.ldap.handler.LDAPSessionRequiredHandler;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import java.io.File;
-import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class App {
     public static void main(String[] args) throws Exception {
@@ -26,8 +27,8 @@ public class App {
         loggerConfig.setLevel(Level.INFO);
 
         LDAPServer ldapServer = new LDAPServer(6389);
-        HashMap<String, LDAPSession> sessionMap = new HashMap<>(100);
-        HashMap<String, SSLEngine> sslEngineMap = new HashMap<>(100);
+        ConcurrentHashMap<String, LDAPSession> sessionMap = new ConcurrentHashMap<>(100);
+        ConcurrentHashMap<String, SSLEngine> sslEngineMap = new ConcurrentHashMap<>(100);
 
         SSLContext sslContext = SSLHelper.createSSLContext(new File(App.class.getResource("/server.jks").getPath()), "123456".toCharArray());
 
@@ -35,6 +36,7 @@ public class App {
                 .appendDecoder(LDAPDecoder.class)
                 //非验证证书时,sslEngineMap非必需
                 .appendHandler(new LDAPBindHandler(sessionMap, sslEngineMap))
+                .appendHandler(new LDAPSessionRequiredHandler(sessionMap, false))
                 .appendHandler(new LDAPAbandonHandler())
                 .appendHandler(new LDAPModifyHandler(sessionMap))
                 .appendHandler(new LDAPSearchHandler(sessionMap))

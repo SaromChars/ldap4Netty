@@ -36,8 +36,8 @@ public class LDAPClient {
     private static final Integer DEFAULT_PORT = 389;
 
     private List<ChannelHandler> handlers = null;
-    private Class decoderClass = null;
-    private Class encoderClass = null;
+    private Class<? extends io.netty.handler.codec.ByteToMessageDecoder> decoderClass = null;
+    private Class<? extends io.netty.handler.codec.MessageToByteEncoder> encoderClass = null;
 
     private EventLoopGroup eventExecutors = null;
 
@@ -77,12 +77,12 @@ public class LDAPClient {
         return this;
     }
 
-    public LDAPClient appendDecoder(Class decoderClazz) {
+    public LDAPClient appendDecoder(Class<? extends io.netty.handler.codec.ByteToMessageDecoder> decoderClazz) {
         this.decoderClass = decoderClazz;
         return this;
     }
 
-    public LDAPClient appendEncoder(Class encoderClazz) {
+    public LDAPClient appendEncoder(Class<? extends io.netty.handler.codec.MessageToByteEncoder> encoderClazz) {
         this.encoderClass = encoderClazz;
         return this;
     }

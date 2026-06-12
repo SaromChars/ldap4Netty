@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @descriptions:
@@ -35,13 +36,13 @@ public class LDAPServer {
     private static final Integer DEFAULT_PORT = 389;
 
     private List<ChannelHandler> handlers = null;
-    private Class decoderClass = null;
-    private Class encoderClass = null;
+    private Class<? extends io.netty.handler.codec.ByteToMessageDecoder> decoderClass = null;
+    private Class<? extends io.netty.handler.codec.MessageToByteEncoder> encoderClass = null;
 
-    private static EventLoopGroup bossGroup = null;
-    private static EventLoopGroup workerGroup = null;
+    private EventLoopGroup bossGroup = null;
+    private EventLoopGroup workerGroup = null;
 
-    private static ChannelInitializer initializer = null;
+    private ChannelInitializer initializer = null;
 
     public Boolean start() throws LDAPException {
 
@@ -70,7 +71,7 @@ public class LDAPServer {
             // Wait until the server socket is closed.
             f.channel().closeFuture().sync();
         } catch (Exception e) {
-
+            LOGGER.error("LDAPServer error", e);
         } finally {
             workerGroup.shutdownGracefully();
             bossGroup.shutdownGracefully();
@@ -102,12 +103,12 @@ public class LDAPServer {
         return this;
     }
 
-    public LDAPServer appendDecoder(Class decoderClazz) {
+    public LDAPServer appendDecoder(Class<? extends io.netty.handler.codec.ByteToMessageDecoder> decoderClazz) {
         this.decoderClass = decoderClazz;
         return this;
     }
 
-    public LDAPServer appendEncoder(Class encoderClazz) {
+    public LDAPServer appendEncoder(Class<? extends io.netty.handler.codec.MessageToByteEncoder> encoderClazz) {
         this.encoderClass = encoderClazz;
         return this;
     }

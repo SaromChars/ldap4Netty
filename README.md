@@ -6,6 +6,98 @@
 
 ## 如何使用
 
+### LDAP Proxy
+
+`ldap-server` 模块提供轻量 LDAP Proxy，可用于本地调试、迁移观测和访问日志审计。Proxy 默认采用 1:1 客户端到上游连接模型，bind/search 请求会转发到上游 LDAP，并把上游响应按原 messageId 返回给客户端。
+
+```java
+import priv.sarom.ldap4Netty.ldap.proxy.LDAPProxyServer;
+import priv.sarom.ldap4Netty.ldap.proxy.ProxyConfig;
+import priv.sarom.ldap4Netty.ldap.proxy.interceptor.AccessLogInterceptor;
+
+import java.util.concurrent.TimeUnit;
+
+public class ProxyExample {
+    public static void main(String[] args) throws Exception {
+        ProxyConfig config = ProxyConfig.builder()
+                .listenPort(6389)
+                .upstreamHost("localhost")
+                .upstreamPort(389)
+                .connectTimeoutMillis(5000)
+                .build()
+                .validate();
+
+        LDAPProxyServer proxyServer = new LDAPProxyServer(config)
+                .addInterceptor(new AccessLogInterceptor());
+
+        proxyServer.startAsync();
+        proxyServer.awaitReady(5, TimeUnit.SECONDS);
+
+        Runtime.getRuntime().addShutdownHook(new Thread(proxyServer::stop));
+    }
+}
+```
+
+也可以直接运行 `ProxyApp`：
+
+```bash
+java -cp ldap-server/target/ldap-server-1.0-SNAPSHOT.jar priv.sarom.ldap4Netty.ProxyApp 6389 localhost 389
+```
+
+Proxy interceptor 按 `order()` 从小到大处理请求，按相反顺序处理响应。interceptor 返回 `null` 表示丢弃当前消息并停止后续处理。内置 `AccessLogInterceptor` 记录连接、操作类型、messageId、结果和耗时；simple bind 密码不会写入访问日志。
+
+### Static Mock Directory
+
+`LDAPSearchHandler` 可接入静态内存目录，用于本地开发和 CI 中模拟 LDAP 查询。当前支持 base object、one-level、subtree scope，以及 equality / presence filter。只读 mock 场景下，`LDAPModifyHandler(sessionMap, true)` 会对 modify 返回 `UNWILLING_TO_PERFORM`。
+
+```java
+import priv.sarom.ldap4Netty.ldap.LDAPServer;
+import priv.sarom.ldap4Netty.ldap.codec.LDAPDecoder;
+import priv.sarom.ldap4Netty.ldap.codec.LDAPEncoder;
+import priv.sarom.ldap4Netty.ldap.directory.InMemoryDirectory;
+import priv.sarom.ldap4Netty.ldap.directory.StaticDirectoryEntry;
+import priv.sarom.ldap4Netty.ldap.entity.LDAPSession;
+import priv.sarom.ldap4Netty.ldap.handler.LDAPBindHandler;
+import priv.sarom.ldap4Netty.ldap.handler.LDAPExceptionHandler;
+import priv.sarom.ldap4Netty.ldap.handler.LDAPModifyHandler;
+import priv.sarom.ldap4Netty.ldap.handler.LDAPSearchHandler;
+import priv.sarom.ldap4Netty.ldap.handler.LDAPSessionRequiredHandler;
+
+import java.util.Arrays;
+import java.util.concurrent.ConcurrentHashMap;
+
+public class MockDirectoryExample {
+    public static void main(String[] args) throws Exception {
+        ConcurrentHashMap<String, LDAPSession> sessionMap = new ConcurrentHashMap<>(100);
+        InMemoryDirectory directory = new InMemoryDirectory(Arrays.asList(
+                StaticDirectoryEntry.builder()
+                        .dn("ou=people,dc=example,dc=com")
+                        .attribute("objectClass", "organizationalUnit")
+                        .attribute("ou", "people")
+                        .build(),
+                StaticDirectoryEntry.builder()
+                        .dn("uid=alice,ou=people,dc=example,dc=com")
+                        .attribute("objectClass", "inetOrgPerson")
+                        .attribute("uid", "alice")
+                        .attribute("cn", "Alice")
+                        .attribute("mail", "alice@example.com")
+                        .build()
+        ));
+
+        new LDAPServer(6389)
+                .appendEncoder(LDAPEncoder.class)
+                .appendDecoder(LDAPDecoder.class)
+                .appendHandler(new LDAPBindHandler(sessionMap, null))
+                .appendHandler(new LDAPSessionRequiredHandler(sessionMap, false))
+                .appendHandler(new LDAPModifyHandler(sessionMap, true))
+                .appendHandler(new LDAPSearchHandler(sessionMap, directory))
+                .appendHandler(new LDAPExceptionHandler())
+                .init(null, null)
+                .start();
+    }
+}
+```
+
 1. 启动LDAP服务端，位于ldap-server模块下，有现成的启动代码App.java
     ```java
     package priv.sarom.ldap4Netty;
@@ -20,6 +112,7 @@
     import priv.sarom.ldap4Netty.ldap.handler.LDAPBindHandler;
     import priv.sarom.ldap4Netty.ldap.handler.LDAPExceptionHandler;
     import priv.sarom.ldap4Netty.ldap.handler.LDAPModifyHandler;
+    import priv.sarom.ldap4Netty.ldap.handler.LDAPSessionRequiredHandler;
     
     import java.util.HashMap;
     
@@ -34,6 +127,7 @@
             ldapServer.appendEncoder(LDAPEncoder.class)
                     .appendDecoder(LDAPDecoder.class)
                     .appendHandler(new LDAPBindHandler(sessionMap, null))
+                    .appendHandler(new LDAPSessionRequiredHandler(sessionMap, false))
                     .appendHandler(new LDAPAbandonHandler())
                     .appendHandler(new LDAPModifyHandler(sessionMap))
                     .appendHandler(new LDAPExceptionHandler())

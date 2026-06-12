@@ -27,8 +27,8 @@ public class SSLInitializer extends ChannelInitializer {
     public static final Logger LOGGER = LoggerFactory.getLogger(SSLInitializer.class);
     private final Map<String, SSLEngine> sslEngineMap;
 
-    private Class decoderClass = null;
-    private Class encoderClass = null;
+    private Class<? extends ByteToMessageDecoder> decoderClass = null;
+    private Class<? extends MessageToByteEncoder> encoderClass = null;
     private List<ChannelHandler> handlers = null;
 
     private SSLContext sslContext;
@@ -54,17 +54,23 @@ public class SSLInitializer extends ChannelInitializer {
         pipeline.addLast(new SslHandler(sslEngine));
 
         if (encoderClass != null) {
-            pipeline.addLast((MessageToByteEncoder) encoderClass.newInstance());
+            pipeline.addLast(encoderClass.newInstance());
         }
 
         if (decoderClass != null) {
-            pipeline.addLast((ByteToMessageDecoder) decoderClass.newInstance());
+            pipeline.addLast(decoderClass.newInstance());
         }
 
-        handlers.stream().forEach(channelHandler -> pipeline.addLast(channelHandler));
+        for (ChannelHandler handler : handlers) {
+            pipeline.addLast(handler);
+        }
     }
 
-    public SSLInitializer(Class decoderClass, Class encoderClass, List<ChannelHandler> handlers, SSLContext sslContext, Map<String, SSLEngine> sslEngineMap) throws LDAPException {
+    public SSLInitializer(Class<? extends ByteToMessageDecoder> decoderClass,
+                         Class<? extends MessageToByteEncoder> encoderClass,
+                         List<ChannelHandler> handlers,
+                         SSLContext sslContext,
+                         Map<String, SSLEngine> sslEngineMap) throws LDAPException {
 
         if (decoderClass == null) {
             throw new LDAPException("decoderClass should not be null..");

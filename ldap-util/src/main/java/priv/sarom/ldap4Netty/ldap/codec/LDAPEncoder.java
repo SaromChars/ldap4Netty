@@ -45,7 +45,7 @@ public class LDAPEncoder extends MessageToByteEncoder {
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        cause.printStackTrace();
+        log.error("LDAPEncoder error", cause);
         ctx.close();
     }
 }

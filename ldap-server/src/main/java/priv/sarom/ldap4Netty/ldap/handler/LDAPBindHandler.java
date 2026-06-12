@@ -10,6 +10,10 @@ import org.apache.directory.api.ldap.model.message.MessageTypeEnum;
 import org.apache.directory.api.ldap.model.message.Request;
 import org.apache.directory.api.ldap.model.message.ResultCodeEnum;
 import org.apache.directory.api.ldap.model.message.ResultResponse;
+import priv.sarom.ldap4Netty.ldap.auth.AcceptAllAuthenticator;
+import priv.sarom.ldap4Netty.ldap.auth.AuthenticationContext;
+import priv.sarom.ldap4Netty.ldap.auth.AuthenticationResult;
+import priv.sarom.ldap4Netty.ldap.auth.Authenticator;
 import priv.sarom.ldap4Netty.ldap.entity.LDAPAccount;
 import priv.sarom.ldap4Netty.ldap.entity.LDAPSession;
 
@@ -18,7 +22,6 @@ import javax.security.cert.X509Certificate;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 
 /**
  * 说明:
@@ -31,14 +34,14 @@ import java.util.concurrent.CompletableFuture;
 public class LDAPBindHandler extends ChannelInboundHandlerAdapter {
 
     private final Map<String, SSLEngine> sslEngineMap;
-    private Map<String, LDAPSession> ldapSessionMap;
+    private final Map<String, LDAPSession> ldapSessionMap;
+    private final Authenticator authenticator;
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
 
         String channelId = ctx.channel().id().asLongText();
-        log.info("---------------------------channelId:" + channelId);
-        log.info("---------------------------thread:" + Thread.currentThread().getName());
+        log.debug("processing LDAP message, channel: {}", channelId);
         Request request = (Request) msg;
         if (request.getType() != MessageTypeEnum.BIND_REQUEST) {
 
@@ -49,15 +52,16 @@ public class LDAPBindHandler extends ChannelInboundHandlerAdapter {
             return;
         }
 
-        log.info("enter the LDAPBindHandler.....");
+        log.debug("processing bind request, channel: {}", channelId);
 
         //bind data , create the ldap session
         BindRequest bindRequest = (BindRequest) request;
 
         //get the information about client from this connnection
-        String ip = ((InetSocketAddress) ctx.channel().remoteAddress()).getAddress().getHostAddress();
+        String ip = resolveRemoteAddress(ctx);
         String account = bindRequest.getName();
-        String pwd = new String(bindRequest.getCredentials(), StandardCharsets.UTF_8);
+        byte[] credentials = bindRequest.getCredentials();
+        String pwd = new String(credentials, StandardCharsets.UTF_8);
 
         //get the client cert form sslEngineMap
         byte[] clientCertData = null;
@@ -69,6 +73,25 @@ public class LDAPBindHandler extends ChannelInboundHandlerAdapter {
             }
         }
 
+        ResultResponse resultResponse = bindRequest.getResultResponse();
+        resultResponse.setMessageId(request.getMessageId());
+        LdapResult result = resultResponse.getLdapResult();
+        result.setMatchedDn(bindRequest.getDn());
+
+        AuthenticationResult authResult = authenticator.authenticate(AuthenticationContext.builder()
+                .bindDn(account)
+                .credentials(credentials)
+                .remoteAddress(ip)
+                .clientCertificate(clientCertData)
+                .build());
+
+        if (!authResult.isSuccess()) {
+            result.setResultCode(ResultCodeEnum.INVALID_CREDENTIALS);
+            result.setDiagnosticMessage(authResult.getDiagnosticMessage());
+            ctx.channel().writeAndFlush(resultResponse);
+            return;
+        }
+
         LDAPAccount client = LDAPAccount.builder()
                 .account(account)
                 .password(pwd)
@@ -77,41 +100,56 @@ public class LDAPBindHandler extends ChannelInboundHandlerAdapter {
                 .cert(clientCertData)
                 .build();
 
-        //match the client, accessable,
-        //else return failure
-
-        //put into the session
         LDAPSession ldapSession = new LDAPSession();
         ldapSession.setAccount(client);
         ldapSession.setRemoteIP(client.getIp());
+        ldapSession.setAnonymous(false);
 
         ldapSessionMap.put(channelId, ldapSession);
 
-        //another business logical process
-        ResultResponse resultResponse = bindRequest.getResultResponse();
-        resultResponse.setMessageId(request.getMessageId());
-        LdapResult result = resultResponse.getLdapResult();
         result.setResultCode(ResultCodeEnum.SUCCESS);
-        result.setMatchedDn(bindRequest.getDn());
-
-        CompletableFuture.runAsync(() ->
-                ctx.channel().writeAndFlush(resultResponse)
-        );
+        ctx.channel().writeAndFlush(resultResponse);
 
     }
 
     @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        String channelId = ctx.channel().id().asLongText();
+        LDAPSession removed = ldapSessionMap.remove(channelId);
+        if (removed != null) {
+            log.info("session removed for channel: {}", channelId);
+        }
+        if (sslEngineMap != null) {
+            sslEngineMap.remove(channelId);
+        }
+        ctx.fireChannelInactive();
+    }
+
+    @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        log.error("catch the error...................");
-        cause.printStackTrace();
+        log.error("LDAPBindHandler error, channel: {}", ctx.channel().id().asLongText(), cause);
         ctx.close();
     }
 
     public LDAPBindHandler(Map<String, LDAPSession> ldapSessionMap, Map<String, SSLEngine> sslEngineMap) throws Exception {
+        this(ldapSessionMap, sslEngineMap, new AcceptAllAuthenticator());
+    }
+
+    public LDAPBindHandler(Map<String, LDAPSession> ldapSessionMap, Map<String, SSLEngine> sslEngineMap,
+                           Authenticator authenticator) throws Exception {
         if (ldapSessionMap == null) {
             throw new Exception("the ldapSessionMap is not be null");
         }
         this.ldapSessionMap = ldapSessionMap;
         this.sslEngineMap = sslEngineMap;
+        this.authenticator = authenticator;
+    }
+
+    private String resolveRemoteAddress(ChannelHandlerContext ctx) {
+        if (ctx.channel().remoteAddress() instanceof InetSocketAddress) {
+            InetSocketAddress address = (InetSocketAddress) ctx.channel().remoteAddress();
+            return address.getAddress().getHostAddress() + ":" + address.getPort();
+        }
+        return String.valueOf(ctx.channel().remoteAddress());
     }
 }

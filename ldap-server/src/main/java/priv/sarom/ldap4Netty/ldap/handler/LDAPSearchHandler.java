@@ -5,6 +5,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.directory.api.ldap.model.entry.DefaultAttribute;
+import org.apache.directory.api.ldap.model.entry.Entry;
 import org.apache.directory.api.ldap.model.message.LdapResult;
 import org.apache.directory.api.ldap.model.message.MessageTypeEnum;
 import org.apache.directory.api.ldap.model.message.Request;
@@ -14,8 +15,11 @@ import org.apache.directory.api.ldap.model.message.SearchResultDoneImpl;
 import org.apache.directory.api.ldap.model.message.SearchResultEntryImpl;
 import org.apache.directory.api.ldap.model.name.Dn;
 import org.apache.directory.api.ldap.model.name.Rdn;
+import priv.sarom.ldap4Netty.ldap.directory.InMemoryDirectory;
+import priv.sarom.ldap4Netty.ldap.directory.StaticDirectoryEntry;
 import priv.sarom.ldap4Netty.ldap.entity.LDAPSession;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -28,26 +32,30 @@ import java.util.Map;
 public class LDAPSearchHandler extends ChannelInboundHandlerAdapter {
 
     private Map<String, LDAPSession> ldapSessionMap;
+    private final InMemoryDirectory directory;
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
 
-        log.info("enter the LDAPSearchHandler.......");
-        log.info("---------------------------thread:" + Thread.currentThread().getName());
-
         Request request = (Request) msg;
-        SearchRequest req = (SearchRequest) request;
 
         if (request.getType() != MessageTypeEnum.SEARCH_REQUEST) {
-            //call the next handler
             ctx.fireChannelRead(msg);
             return;
         }
+
+        log.info("enter the LDAPSearchHandler.......");
+        SearchRequest req = (SearchRequest) request;
 
         log.info("------------------------------------MessageId:" + req.getMessageId());
         log.info("------------------------------------Base:" + req.getBase());
         log.info("------------------------------------Filter:" + req.getFilter().toString());
         log.info("------------------------------------Scope:" + req.getScope().name());
+
+        if (directory != null) {
+            writeDirectoryResults(ctx, req);
+            return;
+        }
 
         SearchResultEntryImpl resultEntry = new SearchResultEntryImpl();
         //返回用户相关数据
@@ -89,6 +97,23 @@ public class LDAPSearchHandler extends ChannelInboundHandlerAdapter {
 
     }
 
+    private void writeDirectoryResults(ChannelHandlerContext ctx, SearchRequest req) throws Exception {
+        List<StaticDirectoryEntry> entries = directory.search(req.getBase(), req.getScope(), req.getFilter());
+        for (StaticDirectoryEntry directoryEntry : entries) {
+            SearchResultEntryImpl resultEntry = new SearchResultEntryImpl(req.getMessageId());
+            resultEntry.setObjectName(directoryEntry.getDn());
+            Entry entry = directoryEntry.toEntry();
+            resultEntry.setEntry(entry);
+            writeWithProtected(ctx, resultEntry);
+        }
+
+        SearchResultDoneImpl resultResponse = (SearchResultDoneImpl) req.getResultResponse();
+        LdapResult result = resultResponse.getLdapResult();
+        resultResponse.setMessageId(req.getMessageId());
+        result.setResultCode(ResultCodeEnum.SUCCESS);
+        writeWithProtected(ctx, resultResponse);
+    }
+
     private void writeWithProtected(ChannelHandlerContext ctx, Object obj) {
         if (ctx.channel().isActive() && ctx.channel().isWritable()) {
             ctx.channel().writeAndFlush(obj);
@@ -104,9 +129,14 @@ public class LDAPSearchHandler extends ChannelInboundHandlerAdapter {
     }
 
     public LDAPSearchHandler(Map<String, LDAPSession> ldapSessionMap) throws Exception {
+        this(ldapSessionMap, null);
+    }
+
+    public LDAPSearchHandler(Map<String, LDAPSession> ldapSessionMap, InMemoryDirectory directory) throws Exception {
         if (ldapSessionMap == null) {
             throw new Exception("the ldapSessionMap is not be null");
         }
         this.ldapSessionMap = ldapSessionMap;
+        this.directory = directory;
     }
 }
